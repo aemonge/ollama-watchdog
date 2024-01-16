@@ -1,0 +1,102 @@
+[tool.poetry]
+name = "ollama-watchdog"
+version = "0.0.1"
+description = "A Linux daemon that enhances the chat experience in Ollama by handling file includes and web crawling"
+authors = ["aemonge <andres@babiopower.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+watchdog = "^3.0.0"
+beautifulsoup4 = "^4.12.2"
+
+[tool.poetry.group.dev.dependencies]
+ipdb = "^0.13.13"
+flake8 = "^6.0.0"
+isort = "^5.12.0"
+black = "^23.3.0"
+flake8-quotes = "^3.3.2"
+pep8-naming = "^0.13.3"
+flake8-picky-parentheses = "^0.5.0"
+flake8-docstrings = "^1.7.0"
+toml = "^0.10.2"
+types-toml = "^0.10.8.6"
+pyright = "^1.1.318"
+bandit = "^1.7.5"
+hooks4git = "^0.4.289"
+darglint = "^1.8.1"
+pylsp-rope = "^0.1.11"
+flake8-print = "^5.0.0"
+flake8-bandit = "^4.1.1"
+flake8-unused-arguments = "^0.0.13"
+flake8-comprehensions = "^3.14.0"
+flake8-bugbear = "^23.7.10"
+flake8-annotations = "^3.0.1"
+flake8-black = "^0.3.6"
+flake8-docstring-checker = "^1.2"
+flake8-eradicate = "^1.5.0"
+flake8-builtins = "^2.1.0"
+flake8-string-format = "^0.3.0"
+flake8-blind-except = "^0.2.1"
+flake8-isort = "^6.0.0"
+flake8-todo = "^0.7"
+autoflake = "^2.2.0"
+sourcery-cli = "^1.8.0"
+debugpy = "^1.6.7.post1"
+docformatter = { extras = ["tomli"], version = "^1.7.5" }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+combine_as_imports = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.black]
+line-length = 88
+target-version = ['py36', 'py37', 'py38']
+include = '\.pyi?$'
+exclude = '''
+(
+/(
+    \.eggs         # exclude a few common directories in the
+  | \.git          # root of the project
+  | \.hg
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+| foo.py           # also separately exclude a file named foo.py in
+                   # the root of the project
+)
+'''
+string-normalization = false
+
+[tool.docformatter]
+black = true
+recursive = true
+tab-width = 4
+in-place = true
+
+[tool.autoflake]
+check = false
+quiet = true
+imports = ["fastapi", "httpx", "pymongo"]
+in_place = true
+recursive = true
+remove_all_unused_imports = true
+ignore_init_module_imports = true
+remove_duplicate_keys = true
+remove_unused_variables = true

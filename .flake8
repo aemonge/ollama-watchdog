@@ -1,0 +1,20 @@
+[flake8]
+base-package = app
+docstring_style= numpy
+inline-quotes = double
+docstring-convention = numpy
+exclude = .git, __pycache__, docs, venv, *.egg, build
+max-line-length = 88
+extend-ignore = ANN101
+max-module-lines = 1
+no-spaces-allowed = true
+naming-convention = snake_case
+ignore=D101, D102
+require-code = true
+
+restrict_relative_imports = true
+restrict_local_scope_imports = true
+restrict_private_imports = true
+restrict_wildcard_imports = true
+restrict_future_imports = true
+restrict_main_imports = true
