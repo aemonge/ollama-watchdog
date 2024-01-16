@@ -11,17 +11,22 @@ for including files (`<!-- include: file -->`) and web pages
 (`<!-- include: http(s)://example.com -->`). This tool aims for simplicity by utilizing
 users' preferred editors for input and output handling.
 
+## Dependencies
+
+-   (optional) `mdcat` to visualize the rendered markdown files in the terminal.
+
 ## Usage
 
 To use `ollama-watchdog`, follow these steps:
 
 1. Install the required Python packages (see [Dependencies](#dependencies)).
 2. Configure the project by editing the `config.yaml` file (optional).
-3. Start the daemon with the following command: `python main.py`.
+3. Start the daemon with the following command: `./main.py`.
 4. Input your chat messages in a markdown format with file and web include syntax as
    needed.
 5. Watch as Ollama processes the message using `ollama-watchdog` to fetch files and web
    pages, if included.
+6. Tail the output file to see real time responses of the chat with `./tail_output`.
 
 ## Features
 
@@ -45,4 +50,8 @@ To use `ollama-watchdog`, follow these steps:
 
 ## Todo
 
--   [ ] Use the payload option `stream: True` to recive the chunks and process them
+-   [ ] Use the payload option `stream: True` to receive the chunks and process them
+-   [ ] Analyze https://github.com/microsoft/prompt-engine-py and apply useful ideas
+-   [ ] Apply chunks responses to the Ollama
+-   [ ] Add support for any endpoint like, perplexity.
+-   [ ] Ability to include all types of files

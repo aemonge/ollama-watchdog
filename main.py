@@ -12,7 +12,10 @@ from src.watch_handler import WatcherHandler
 
 args = {"create-files": True, "keep-input": False}
 
-separators = {"pre": "\n[//]: # ({user})\n", "post": "\n"}
+separators = {
+    "pre": "__{user}__ _(12:12)_:\n",
+    "post": "\n---\n",
+}
 
 
 if __name__ == "__main__":

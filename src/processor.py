@@ -27,6 +27,7 @@ def llm_response(prompt: str) -> str:
         The response from the LLM.
     """
     ollama = Ollama(base_url="http://localhost:11434", model="orca-mini")
+    # ollama = Ollama(base_url="http://localhost:11434", model="mistral")
     return ollama(prompt)
 
 
