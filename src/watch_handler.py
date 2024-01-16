@@ -58,16 +58,19 @@ class WatcherHandler(FileSystemEventHandler):
         """Process the file after a delay."""
         with open(self.src_file, "r") as file:
             file_content = file.read()
-            process_content = process(file_content)
-
             user_prompt = self.separators["pre"].format(user=os.getenv("USER"))
             user_prompt += file_content
             user_prompt += self.separators["post"]
 
-            ai_response = self.separators["pre"].format(user="orca-mini")
-            ai_response += process_content
-            ai_response += self.separators["post"]
         if len(file_content) > 0:
             with open(self.dst_file, "a") as output:
                 output.write(user_prompt)
+
+        process_content = process(file_content)
+        ai_response = self.separators["pre"].format(user="orca-mini")
+        ai_response += process_content
+        ai_response += self.separators["post"]
+
+        if len(file_content) > 0:
+            with open(self.dst_file, "a") as output:
                 output.write(ai_response)
