@@ -13,8 +13,8 @@ from src.watch_handler import WatcherHandler
 args = {"create-files": True, "keep-input": False}
 
 separators = {
-    "pre": "__{user}__ _(12:12)_:\n",
-    "post": "\n---\n",
+    "pre": "**{user}** ({date}):\n\n",
+    "post": "\n\n---\n\n",
 }
 
 
@@ -22,6 +22,7 @@ if __name__ == "__main__":
     config = yaml.safe_load(open("config.yaml", "r"))
     input_file = Path(config["input"])
     output_file = Path(config["output"])
+    model_name = config["model"]
 
     if (not input_file.exists()) and args["create-files"]:
         open(input_file, "w").close()
@@ -32,7 +33,10 @@ if __name__ == "__main__":
     observer = Observer()
     observer.schedule(
         WatcherHandler(
-            src_file=input_file, dst_file=output_file, separators=separators
+            src_file=input_file,
+            dst_file=output_file,
+            separators=separators,
+            model_name=model_name,
         ),
         path=str(input_file),  # Watch the directory containing the input file
     )

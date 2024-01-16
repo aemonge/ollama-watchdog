@@ -3,6 +3,7 @@
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 
 from watchdog.events import FileModifiedEvent, FileSystemEvent, FileSystemEventHandler
@@ -17,7 +18,13 @@ class WatcherHandler(FileSystemEventHandler):
     Using watchdog to monitor the input directory for changes.
     """
 
-    def __init__(self, src_file: Path, dst_file: Path, separators: dict) -> None:
+    def __init__(
+        self,
+        src_file: Path,
+        dst_file: Path,
+        separators: dict,
+        model_name: str = "orca-mini",
+    ) -> None:
         """
         Initialize the watcher.
 
@@ -33,6 +40,7 @@ class WatcherHandler(FileSystemEventHandler):
         super()
         self.src_file = src_file
         self.dst_file = dst_file
+        self.model_name = model_name
         self.separators = separators
         self.debounce_timer = None
         self.executor = ThreadPoolExecutor(max_workers=1)
@@ -58,7 +66,10 @@ class WatcherHandler(FileSystemEventHandler):
         """Process the file after a delay."""
         with open(self.src_file, "r") as file:
             file_content = file.read()
-            user_prompt = self.separators["pre"].format(user=os.getenv("USER"))
+            date = datetime.now().strftime("%a, %d %b %H:%M")
+            user_prompt = self.separators["pre"].format(
+                user=os.getenv("USER"), date=date
+            )
             user_prompt += file_content
             user_prompt += self.separators["post"]
 
@@ -66,8 +77,9 @@ class WatcherHandler(FileSystemEventHandler):
             with open(self.dst_file, "a") as output:
                 output.write(user_prompt)
 
-        process_content = process(file_content)
-        ai_response = self.separators["pre"].format(user="orca-mini")
+        process_content = process(file_content, model=self.model_name)
+        date = datetime.now().strftime("%a, %d %b %H:%M")
+        ai_response = self.separators["pre"].format(user=self.model_name, date=date)
         ai_response += process_content
         ai_response += self.separators["post"]
 

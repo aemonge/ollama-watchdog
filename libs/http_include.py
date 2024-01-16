@@ -21,7 +21,6 @@ def get_website_content(content: str) -> str:
     : str
         The content string with the Website content.
     """
-    include_pattern = r"(\s*)(<!-- *include: *http(s?)://[^ ]* *-->)"
     include_pattern = r"(\s*)(<!-- *include: *(http(s?)://[^ ]*) *-->)"
     content_list = content.split("\n")
 

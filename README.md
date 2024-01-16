@@ -13,7 +13,8 @@ users' preferred editors for input and output handling.
 
 ## Dependencies
 
--   (optional) `mdcat` to visualize the rendered markdown files in the terminal.
+-   (optional) [mdcat](https://github.com/swsnr/mdcat) to visualize the rendered
+    markdown files in the terminal.
 
 ## Usage
 
