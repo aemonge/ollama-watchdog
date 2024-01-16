@@ -42,3 +42,7 @@ To use `ollama-watchdog`, follow these steps:
 -   Ensure the daemon can be run as a service or a regular script.
 -   Add error handling and logging improvements.
 -   Test thoroughly on various Linux distributions.
+
+## Todo
+
+-   [ ] Use the payload option `stream: True` to recive the chunks and process them

@@ -2,6 +2,7 @@
 
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from watchdog.events import FileModifiedEvent, FileSystemEvent, FileSystemEventHandler
@@ -34,6 +35,7 @@ class WatcherHandler(FileSystemEventHandler):
         self.dst_file = dst_file
         self.separators = separators
         self.debounce_timer = None
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
     def on_modified(self, event: FileSystemEvent) -> None:
         """Call when a file is modified.
@@ -57,6 +59,7 @@ class WatcherHandler(FileSystemEventHandler):
         with open(self.src_file, "r") as file:
             file_content = file.read()
             process_content = process(file_content)
+
             user_prompt = self.separators["pre"].format(user=os.getenv("USER"))
             user_prompt += file_content
             user_prompt += self.separators["post"]
