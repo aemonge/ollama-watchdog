@@ -21,7 +21,7 @@ def get_website_content(content: str) -> str:
     : str
         The content string with the Website content.
     """
-    include_pattern = r"(\s*)(<!-- *include: *(http(s?)://[^ ]*) *-->)"
+    include_pattern = r"(\s*)(<-- *include: *(http(s?)://[^ ]*) *-->)"
     content_list = content.split("\n")
 
     for i, line in enumerate(content_list):
@@ -41,7 +41,7 @@ def get_website_content(content: str) -> str:
                 include_content = [padding + line for line in include_content]
 
             except FileNotFoundError:
-                include_content = ["<!-- include website not found -->"]
+                include_content = ["<-- include website not found -->"]
 
             code_block = [f"{padding}**{url}**:\n\n"]
             code_block += [f"{padding}```\n"] + include_content + [f"{padding}```"]

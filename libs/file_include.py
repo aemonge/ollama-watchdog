@@ -1,7 +1,7 @@
 """
 Replaces "include" tags in a given input file.
 
-An include tag is a line of comment that looks like this: <!-- include: file.txt -->
+An include tag is a line of comment that looks like this: <-- include: file.txt -->
 This line will be replaced with the contents of the referenced "file.txt" wrapped
 in a code block.
 """
@@ -25,7 +25,7 @@ def replace_include_tags(content: str) -> str:
     : str
         The content string with include tags replaced.
     """
-    include_pattern = r"(\s*)(<!-- *include: *[^ ]* *-->)"
+    include_pattern = r"(\s*)(<-- *include: *[^ ]* *-->)"
     code_marker_ext = {
         "py": "python",
         "js": "javascript",
@@ -55,7 +55,7 @@ def replace_include_tags(content: str) -> str:
             file_name = cast(
                 dict,
                 re.search(
-                    r"(?P<file_name>^.*?)<!--\s*include:\s*(?P<path>.*?)\s*-->",
+                    r"(?P<file_name>^.*?)<--\s*include:\s*(?P<path>.*?)\s*-->",
                     include_tag,
                 ),
             )["path"]
@@ -72,7 +72,7 @@ def replace_include_tags(content: str) -> str:
                 extension = include_file.split(".")[-1]
                 filetype = code_marker_ext.get(extension, "")
             except FileNotFoundError:
-                include_content = ["<!-- include file not found -->", "\n"]
+                include_content = ["<-- include file not found -->", "\n"]
 
             code_block = [f"{padding}**{file_name}**:\n\n"]
             code_block += (
