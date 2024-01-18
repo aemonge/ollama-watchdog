@@ -79,3 +79,4 @@ config.yaml
 input.md
 output.md
 poetry.lock
+example.md
