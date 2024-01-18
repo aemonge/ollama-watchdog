@@ -9,10 +9,8 @@ readme = "README.md"
 python = "^3.11"
 watchdog = "^3.0.0"
 beautifulsoup4 = "^4.12.2"
-httpx = "^0.26.0"
-langchain = "^0.1.0"
-langchain-community = "^0.0.12"
 rich = "^13.7.0"
+ollama = "^0.1.2"
 
 [tool.poetry.group.dev.dependencies]
 ipdb = "^0.13.13"
@@ -97,7 +95,6 @@ in-place = true
 [tool.autoflake]
 check = false
 quiet = true
-imports = ["fastapi", "httpx", "pymongo"]
 in_place = true
 recursive = true
 remove_all_unused_imports = true

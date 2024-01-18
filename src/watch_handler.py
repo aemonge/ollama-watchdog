@@ -1,14 +1,12 @@
 """Watches the input file for changes."""
 
-import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
 
 from watchdog.events import FileModifiedEvent, FileSystemEvent, FileSystemEventHandler
 
-from src.processor import process
+from src.messages import Messages
 
 
 class WatcherHandler(FileSystemEventHandler):
@@ -36,12 +34,16 @@ class WatcherHandler(FileSystemEventHandler):
             The file to write to.
         separators : dict
             The separators to use when writing the file.
+        model_name : str
+            (default: orca-mini) The model name to use when writing the file.
         """
         super()
-        self.src_file = src_file
-        self.dst_file = dst_file
-        self.model_name = model_name
-        self.separators = separators
+        self.messages = Messages(
+            separators=separators,
+            dst_file=dst_file,
+            src_file=src_file,
+            model_name=model_name,
+        )
         self.debounce_timer = None
         self.executor = ThreadPoolExecutor(max_workers=1)
 
@@ -59,30 +61,10 @@ class WatcherHandler(FileSystemEventHandler):
                 self.debounce_timer.cancel()
 
             # Create a new timer
-            self.debounce_timer = threading.Timer(0.25, self.process_file)
+            self.debounce_timer = threading.Timer(0.25, self._process_file)
             self.debounce_timer.start()
 
-    def process_file(self) -> None:
-        """Process the file after a delay."""
-        with open(self.src_file, "r") as file:
-            file_content = file.read()
-            date = datetime.now().strftime("%a, %d %b %H:%M")
-            user_prompt = self.separators["pre"].format(
-                user=os.getenv("USER"), date=date
-            )
-            user_prompt += file_content
-            user_prompt += self.separators["post"]
-
-        if len(file_content) > 0:
-            with open(self.dst_file, "a") as output:
-                output.write(user_prompt)
-
-        process_content = process(file_content, model=self.model_name)
-        date = datetime.now().strftime("%a, %d %b %H:%M")
-        ai_response = self.separators["pre"].format(user=self.model_name, date=date)
-        ai_response += process_content
-        ai_response += self.separators["post"]
-
-        if len(file_content) > 0:
-            with open(self.dst_file, "a") as output:
-                output.write(ai_response)
+    def _process_file(self) -> None:
+        """Process changes in the prompt file to render the response file."""
+        self.messages.inlcude_prompt()
+        self.messages.include_response()

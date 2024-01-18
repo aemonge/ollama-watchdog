@@ -2,6 +2,7 @@
 
 """Watches a file for changes and appends the changes to another file."""
 
+import os
 import time
 from pathlib import Path
 
@@ -17,6 +18,11 @@ separators = {
     "post": "\n",
 }
 
+if os.getenv("DEBUG") == "True":
+    import debugpy
+
+    debugpy.listen(("127.0.0.1", 5678))
+    debugpy.wait_for_client()
 
 if __name__ == "__main__":
     config = yaml.safe_load(open("config.yaml", "r"))

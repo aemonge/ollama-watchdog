@@ -60,3 +60,4 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Add support for any endpoint like, perplexity.
 -   [ ] Ability to include all types of files
 -   [ ] On error, display a message from `system` that tells us the error
+-   [ ] Omit commented string to prompt `<!-- -->`

@@ -1,20 +1,16 @@
 """Process the contents of the input query file."""
 
-from langchain_community.llms import Ollama
+from typing import Any, Iterator, Mapping, cast
+
+from ollama import Client as OClient, Message
 
 from libs.file_include import replace_include_tags
 from libs.http_include import get_website_content
 
 
-def llm_response(prompt: str, model: str) -> str:
+def llm_response(prompt: str, model: str) -> Iterator[Mapping[str, Any]]:
     """
     Get the response from a LLM.
-
-    https://github.com/jmorganca/ollama/blob/main/docs/tutorials/langchainpy.md
-
-    Todo
-    ----
-    [ ] Implement by chunks, us check more processor in langchain
 
     Parameters
     ----------
@@ -28,11 +24,15 @@ def llm_response(prompt: str, model: str) -> str:
     : str
         The response from the LLM.
     """
-    ollama = Ollama(base_url="http://localhost:11434", model=model)
-    return ollama(prompt)
+    client = OClient(base_url="http://localhost:11434")
+    message = Message(role="user", content=prompt)
+    return cast(
+        Iterator[Mapping[str, Any]],
+        client.chat(model=model, messages=[message], stream=True),
+    )
 
 
-def process(contents: str, model: str) -> str:
+def ask_llm(contents: str, model: str) -> Iterator[Mapping[str, Any]]:
     """
     Process the contents of the input query file.
 
@@ -40,6 +40,8 @@ def process(contents: str, model: str) -> str:
     ----------
     contents : str
         The contents of the input query file.
+    model : str
+        The LLM model to use.
 
     Returns
     -------
