@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# noqa: W503
+
 """
 Tails a file in markdown rich format.
 
@@ -13,14 +15,20 @@ printed directly.
 """
 
 
+import os
 import re
 import time
 from io import TextIOWrapper
-from pathlib import Path
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
+
+if os.getenv("DEBUG") == "True":
+    import debugpy
+
+    debugpy.listen(("127.0.0.1", 5678))
+    debugpy.wait_for_client()
 
 
 class Tail:
@@ -37,224 +45,95 @@ class Tail:
         """
         self.file = file
         self.console = Console()
-        self._pennding = ""
-
-        self.delimiter_pattern = re.compile(r"^---")
-        self.author_comment_pattern = re.compile(
-            r"^\[comment\]: # (\*\*(.*)\*\* \((.*)\))"
-        )
-        self.author_comment_pattern = re.compile(
-            r"^\[comment\]:\s*#\s*\(\*\*(\w+)\*\*\s*\((.*)\)\)"
-        )
-
-        # r"^(\s*[-*+]\s*|\s*\d+\.\s*|#{1,6}\s*|>\s*|\[\w*\]\:)"
-        # r"^(\s*[-*+]\s*|\s*\d+\.\s*|>\s*|\[\w*\]\:|\#{1,6}|\s*(!?)\[)"
-        # r"^(\s*[-*+]\s*|\s*\d+\.\s*|>\s*|\[\w*\]\:)"
-        # r"^(#{1,6}\s*|>\s*|\[\w*\]\:)"
-        self.re_line_start = re.compile(
-            r"^(\s{0,3}[-*+]\s{0,3}|\s{0,3}\d+\.\s{0,3}|>\s{0,3}|\[\w*\]\:|\#{1,6}|\s{4})"
-        )
-
-        self.re_undetermined = re.compile(r"^\s{1,3}$")
-
-        self.re_multiline_start = re.compile(r"^\s*`(?![`]{2})$")
-        self.re_multiline_end = re.compile(r"^\s*```$")
-
-        self.re_word_start = re.compile(r"^(`|\*{1,2}|\_{1,2}|\[|\(|~{1,2}|==)")
-        self.re_word2 = re.compile(
-            r"^(`|\*{2}|\_{2}|\[|\(|~{2}|==)[^`\*\_\]\)\~]+(`|\*{2}|\_{2}|\]|\)|~{2}|==)$"
-        )
-        self.re_word1 = re.compile(
-            r"^(`|\*{1}|\_{1}|\[|\(|~{1}|==)[^`\*\_\]\)\~]+(`|\*{1}|\_{1}|\]|\)|~{1}|==)$"
-        )
-
-    def _multiline_processor(self, buffer: str) -> None:
-        """
-        Process the full line in markdown.
-
-        Parameters
-        ----------
-        buffer : str
-            The current character(s) buffer to check for.
-        """
-        while (line := self.file.readline()) and not (
-            self.re_multiline_end.match(line)
-        ):
-            buffer += line
-        buffer += line
-
-        md = Markdown(buffer)
-        self.console.print(md)
-
-    def _line_processor(self, buffer: str) -> None:
-        """
-        Process the full line in markdown.
-
-        Parameters
-        ----------
-        buffer : str
-            The current character(s) buffer to check for.
-        """
-        line = self.file.readline()
-        md = Markdown(buffer + line)
-        self.console.print(md)
-
-    def _word_processor(self, buffer: str) -> None:
-        """
-        Process the full word-block in markdown.
-
-        Parameters
-        ----------
-        buffer : str
-            The current character(s) buffer to check for.
-        """
-        while (char := self.file.read(1)) and not (
-            self.re_word2.match(buffer) or self.re_word1.match(buffer)
-        ):
-            buffer += char
-        buffer += char
-
-        self._pennding += buffer
-        print(buffer, end="")  # noqa: T201
-
-    def is_multilineblock(self, buffer: str) -> bool:
-        """
-        Check if a multi-line-block is potentially starting.
-
-        Parameters
-        ----------
-        buffer : str
-            The current character(s) buffer to check for.
-
-        Returns
-        -------
-        : bool
-            True if the start of the buffer is the start of a multi-line-block
-            in markdown
-        """
-        return bool(self.re_multiline_start.match(buffer))
-
-    def is_lineblock(self, buffer: str) -> bool:
-        """
-        Check if a line-block is potentially starting.
-
-        Parameters
-        ----------
-        buffer : str
-            The current character(s) buffer to check for.
-
-        Returns
-        -------
-        : bool
-            True if the start of the buffer is the start of a line-block in markdown
-        """
-        return bool(self.re_line_start.match(buffer))
-
-    def is_wordblock(self, buffer: str) -> bool:
-        """
-        Check if a word-block is potentially starting.
-
-        Parameters
-        ----------
-        buffer : str
-            The current character(s) buffer to check for.
-
-        Returns
-        -------
-        : bool
-            True if the start of the buffer is the start of a word-block in markdown
-        """
-        return bool(self.re_word_start.match(buffer))
+        self._buffer = ""
 
     def clear_and_render(self) -> None:
         """Clear the current line and render the pending buffer."""
+        if not self._buffer:
+            return
+
         print("\r" + " " * (self.console.width - 1), end="\r")  # noqa: T201
-        md = Markdown(self._pennding)
-        self.console.print(md, end="")
-        self._pennding = ""
+        if self.is_author_comment():
+            pattern = r"\*\*(?P<user>.+?)\*\* \((?P<date>.+?)\)"
+            if match := re.search(pattern, self._buffer):
+                user = Text(match["user"], style="bold")
+                date = Text(match["date"], style="italic")
+                title = user + Text(" (") + date + Text(")")
+                self.console.rule(title=title)
+            self._buffer = ""
+            return
+
+        md = Markdown(self._buffer)
+        self.console.print(md)
+        self._buffer = ""
+
+    def is_multiline_block(self) -> bool:
+        """
+        Check if current buffer is a markdown multi-line block.
+
+        To render it as a block with Markdown, supporting this blocks
+
+        1. Ordered List
+        2. Unordered List
+        3. Table (missing)
+        4. Code Block
+
+        Returns
+        -------
+        : bool
+            If it IS a multi-line block.
+        """
+        code_starts = re.compile(r"^\n```\w*", re.MULTILINE | re.DOTALL)
+        code_ends = re.compile(r"```\n$", re.MULTILINE | re.DOTALL)
+        if code_starts.search(self._buffer):
+            return not code_ends.search(self._buffer)
+
+        if re.compile(r"\n{2}", re.MULTILINE | re.DOTALL).search(self._buffer):
+            return False  # Quickly escape if triple \n is found not in code though
+
+        list_starts = re.compile(r"^\n\d+\.\s", re.MULTILINE | re.DOTALL)
+        list_ends = re.compile(r"\n^(?!\d+\.\s)$", re.MULTILINE | re.DOTALL)
+        if list_starts.search(self._buffer):
+            return not list_ends.search(self._buffer)
+
+        ulist_starts = re.compile(r"^\n-\s+", re.MULTILINE | re.DOTALL)
+        ulist_ends = re.compile(r"\n^(?!-\s+)$", re.MULTILINE | re.DOTALL)
+        if ulist_starts.search(self._buffer):
+            return not ulist_ends.search(self._buffer)
+
+        return False
+
+    def is_author_comment(self) -> bool:
+        """
+        Check if the current buffer is our author comment rule.
+
+        Returns
+        -------
+        : bool
+            If it IS a multi-line block.
+        """
+        pattern = r'\n{0,1}\[comment\]: # "--- (.*)'
+        is_line = re.compile(pattern, re.MULTILINE | re.DOTALL)
+        return bool(is_line.search(self._buffer))
 
     def tail(self) -> None:
         """Tail and process the file."""
-        buffer = ""
-        new_line = False
         while True:
-            time.sleep(5e-2)  # sleep 200 milliseconds
             if not (char := file.read(1)):
-                time.sleep(5e-2)  # sleep 200 milliseconds
-                continue
-            buffer += char
-
-            if new_line and self.re_undetermined.match(buffer):
+                time.sleep(3e-2)  # sleep 200 milliseconds
                 continue
 
-            # if self.is_multilineblock(buffer=buffer):
-            #     self._multiline_processor(buffer=buffer)
-            #     new_line = True
-
-            # elif self.is_lineblock(buffer=buffer):
-            #     self._line_processor(buffer=buffer)
-            #     new_line = True
-
-            elif self.is_wordblock(buffer=buffer):
-                new_line = False
-                self._word_processor(buffer=buffer)
-
-            elif char == "\n":
-                self.clear_and_render()
-                new_line = True
+            if char == "\n":
+                if self.is_multiline_block():
+                    self.console.print(" ", end="")
+                else:
+                    self.clear_and_render()
             else:
-                self.console.print(buffer, end="")
-                # print(buffer, end="")
-                self._pennding += buffer
-                new_line = False
+                self.console.print(char, end="")
 
-            buffer = ""
+            self._buffer += char
 
 
 with open("output.md", "r") as file:
     tail = Tail(file=file)
     tail.tail()
-    # while True:
-    #     if not (char := file.read(1)):
-    #         time.sleep(0.2)  # sleep 200 milliseconds
-    #         continue
-    #     buffer += char
-    #
-    #     if markdown_blockline_start.match(buffer):  # Will possibly start a line-block
-    #         continue
-    #
-    #     # if markdown_blockline.match(buffer):
-    #     #     while (line := file.readline()) and not markdown_blockline_end.match(line):
-    #     #         buffer += line
-    #     #     buffer += line
-    #     #
-    #     #     md = Markdown(buffer)
-    #     # console.print(md)
-    #
-    #     if markdown_line_syntax.match(buffer):
-    #         # elif markdown_line_syntax.match(buffer):
-    #         line = file.readline()
-    #         buffer += line
-    #
-    #         if delimiter_pattern.match(line) or author_comment_pattern.match(line):
-    #             next_line = file.readline()
-    #             if next_line.strip() == "":
-    #                 next_line = file.readline()
-    #
-    #             if match := author_comment_pattern.match(next_line):
-    #                 user = Text(match[1], style="bold")
-    #                 date = Text(match[2], style="italic")
-    #                 title = user + Text(" (") + date + Text(")")
-    #                 console.rule(title=title)
-    #             else:
-    #                 console.rule()
-    #                 md = Markdown(next_line)
-    #                 # console.print(md)
-    #             continue
-    #         else:
-    #             md = Markdown(buffer)
-    #             # console.print(md)  # CAPTURES ALL
-    #     # else:
-    #     #     console.print(char, end="")
-    #
-    #     buffer = ""
