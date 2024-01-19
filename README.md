@@ -65,3 +65,6 @@ To use `ollama-watchdog`, follow these steps:
         we can remove lines with Tails.
 -   [x] Implement and think how to allow Tails to adapt to shorter terminals/console in
         width.
+-   [ ] After a set amount of time with no response from the server, send the buffer to
+        markdown and render it. And quite the tail, and watch the file with watchdog to
+        be less resource intensive
