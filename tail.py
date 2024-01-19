@@ -24,6 +24,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
 
+from src.constants import CONSOLE_PADDING
+
 if os.getenv("DEBUG") == "True":
     import debugpy
 
@@ -46,6 +48,35 @@ class Tail:
         self.file = file
         self.console = Console()
         self._buffer = ""
+        self._spinId = 0
+        self.spinner = [
+            "   ",
+            "•  ",
+            "•• ",
+            "•••",
+            "•• ",
+            "•  ",
+            "   ",
+            "  •",
+            " ••",
+            "•••",
+            " ••",
+            "  •",
+        ]
+
+        self._spin_char_len = len(self.spinner[0]) - 1
+
+    def _print_spinner(self) -> None:
+        """Print a loading spinner."""
+        self._spinId = (self._spinId + 1) % len(self.spinner)
+        max_len = self.console.width - CONSOLE_PADDING - self._spin_char_len
+
+        spined_msg = self._buffer[:max_len]
+        spined_msg = spined_msg.replace("\n", "")
+        spined_msg += self.spinner[self._spinId]
+
+        # Print the new message
+        print("\r" + spined_msg, end="\r")  # noqa: T201
 
     def clear_and_render(self) -> None:
         """Clear the current line and render the pending buffer."""
@@ -117,7 +148,19 @@ class Tail:
         return bool(is_line.search(self._buffer))
 
     def tail(self) -> None:
-        """Tail and process the file."""
+        """
+        Tail and process the file.
+
+        Raises
+        ------
+        ValueError
+            If the console width is too small.
+        """
+        column = self.console.width - CONSOLE_PADDING
+
+        if column < 0:
+            raise ValueError("Console width is too small.")
+
         while True:
             if not (char := file.read(1)):
                 time.sleep(3e-2)  # sleep 200 milliseconds
@@ -126,10 +169,15 @@ class Tail:
             if char == "\n":
                 if self.is_multiline_block():
                     self.console.print(" ", end="")
+                    column -= 1
                 else:
                     self.clear_and_render()
-            else:
+                    column = self.console.width - CONSOLE_PADDING
+            elif column > 0:
                 self.console.print(char, end="")
+                column -= 1
+            elif self.spinner is not None:
+                self._print_spinner()
 
             self._buffer += char
 

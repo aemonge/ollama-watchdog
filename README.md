@@ -51,13 +51,17 @@ To use `ollama-watchdog`, follow these steps:
 
 ## Todo
 
--   [ ] Use the payload option `stream: True` to receive the chunks and process them Use
+-   [x] Use the payload option `stream: True` to receive the chunks and process them Use
         a custom mdcat with python, to render markdown properly after all blocks are
-        sent
-        [help](https://www.perplexity.ai/search/npm-update-g-8J.pqsBFSWOjkWO4nq49UA?s=c)
--   [ ] Analyze https://github.com/microsoft/prompt-engine-py and apply useful ideas
--   [ ] Apply chunks responses to the Ollama
+        sent.
+-   [ ] Analyze [prompt-engine-py](https://github.com/microsoft/prompt-engine-py) and
+        apply useful ideas.
+-   [ ] Apply chunks responses to the Ollama.
 -   [ ] Add support for any endpoint like, perplexity.
--   [ ] Ability to include all types of files
--   [ ] On error, display a message from `system` that tells us the error
--   [ ] Omit commented string to prompt `<!-- -->`
+-   [ ] Ability to include all types of files.
+-   [ ] On error, display a message from `system` that tells us the error.
+-   [ ] Omit commented string to prompt `<!-- -->`.
+-   [ ] keep the response linted in markdown, or at least in a max-line-length, so that
+        we can remove lines with Tails.
+-   [x] Implement and think how to allow Tails to adapt to shorter terminals/console in
+        width.

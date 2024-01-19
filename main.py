@@ -14,7 +14,7 @@ from src.watch_handler import WatcherHandler
 args = {"create-files": True, "keep-input": False}
 
 separators = {
-    "pre": '\n[comment]: # "--- (**{user}** ({date})"\n',
+    "pre": '[comment]: # "--- (**{user}** ({date})"\n',
     "post": "\n",
 }
 
