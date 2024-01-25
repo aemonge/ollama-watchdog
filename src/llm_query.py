@@ -6,6 +6,7 @@ from ollama import Client as OClient, Message
 
 from libs.file_include import replace_include_tags
 from libs.http_include import get_website_content
+from libs.web_search import search_online
 
 
 def llm_response(prompt: str, model: str) -> Iterator[Mapping[str, Any]]:
@@ -51,5 +52,6 @@ def ask_llm(contents: str, model: str) -> Iterator[Mapping[str, Any]]:
     prompt = contents
     prompt = get_website_content(prompt)
     prompt = replace_include_tags(prompt)
+    prompt = search_online(prompt)
 
     return llm_response(prompt, model)

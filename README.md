@@ -35,6 +35,12 @@ To use `ollama-watchdog`, follow these steps:
 -   Utilizes users' preferred editors for handling input and output.
 -   Keeps track of previous conversations (potential future feature).
 
+## Commands
+
+-   `<-- search: python llm library -->`: Search using duckduckgo python SDK
+-   `<-- include: file://~/local/path -->`: Include a local file
+-   `<-- include: http(s)://www.example.com -->`: Include a web, using BeautifulSoup
+
 ## Development Plan
 
 ### v0.1 (Initial Release)
@@ -68,3 +74,4 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] After a set amount of time with no response from the server, send the buffer to
         markdown and render it. And quite the tail, and watch the file with watchdog to
         be less resource intensive
+-   [ ] Use a database to store the conversations.

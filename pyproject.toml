@@ -11,6 +11,7 @@ watchdog = "^3.0.0"
 beautifulsoup4 = "^4.12.2"
 rich = "^13.7.0"
 ollama = "^0.1.2"
+duckduckgo-search = "^4.2"
 
 [tool.poetry.group.dev.dependencies]
 ipdb = "^0.13.13"
