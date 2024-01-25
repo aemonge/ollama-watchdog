@@ -50,6 +50,7 @@ def ask_llm(contents: str, model: str) -> Iterator[Mapping[str, Any]]:
         The processed contents of the input query file.
     """
     prompt = contents
+    prompt = remove_comments(prompt)
     prompt = get_website_content(prompt)
     prompt = replace_include_tags(prompt)
     prompt = search_online(prompt)
