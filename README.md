@@ -63,7 +63,7 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Analyze [prompt-engine-py](https://github.com/microsoft/prompt-engine-py) and
         apply useful ideas.
 -   [x] Apply chunks responses to the Ollama.
--   [ ] Add support for any endpoint like, perplexity.
+-   [x] Add support for any endpoint like, perplexity.
 -   [ ] Ability to include all types of files, like images.
 -   [-] On error, display a message from `system` that tells us the error. Make sure
     https connection errors are being parsed and sent.
@@ -78,3 +78,8 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Use a database to store the conversations.
 -   [ ] Block the input while the responses are being processed or at least queue it and
         trim duplicated.
+-   [ ] Use memory for our LLM's https://chatdatabase.github.io/
+-   [ ] Store the actual query/prompt sent to local LLM in comments, so that we can
+        inspect it ; and also avoid re-triggering the command when using conversation
+        history
+-   [ ] Allow multi string commands, specially useful for `ask`

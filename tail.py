@@ -92,7 +92,7 @@ class Tail:
             self._buffer = ""
             return
 
-        md = Markdown(self._buffer)
+        md = Markdown(self._buffer, code_theme="native", justify="left")
         self.console.print(md)
         self._buffer = ""
 
@@ -112,8 +112,8 @@ class Tail:
         : bool
             If it IS a multi-line block.
         """
-        code_starts = re.compile(r"^\n```\w*", re.MULTILINE | re.DOTALL)
-        code_ends = re.compile(r"```\n$", re.MULTILINE | re.DOTALL)
+        code_starts = re.compile(r"^\n?```\w*", re.MULTILINE | re.DOTALL)
+        code_ends = re.compile(r"```.?$", re.MULTILINE | re.DOTALL)
         if code_starts.search(self._buffer):
             return not code_ends.search(self._buffer)
 

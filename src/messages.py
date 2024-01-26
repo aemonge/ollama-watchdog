@@ -91,8 +91,7 @@ class Messages:
             title = self.model_name
             msg = ask_llm(self.prompt, model=self.model_name)
         except Exception as e:  # noqa: B902
-            title = "System: Exception"
+            title = f"System: Exception {e.__class__.__name__}"
             msg = str(e)
-
         self._put_title(content=title)
         self._put_content(content=msg)

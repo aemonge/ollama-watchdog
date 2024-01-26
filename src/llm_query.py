@@ -4,8 +4,11 @@ from typing import Any, Iterator, Mapping, cast
 
 from ollama import Client as OClient, Message
 
+from libs.ask_webllm import ask_web_llm
+from libs.bash_run import bash_run
 from libs.file_include import replace_include_tags
 from libs.http_include import get_website_content
+from libs.remove_comments import remove_comments
 from libs.web_search import search_online
 
 
@@ -54,5 +57,7 @@ def ask_llm(contents: str, model: str) -> Iterator[Mapping[str, Any]]:
     prompt = get_website_content(prompt)
     prompt = replace_include_tags(prompt)
     prompt = search_online(prompt)
+    prompt = bash_run(prompt)
+    prompt = ask_web_llm(prompt)
 
     return llm_response(prompt, model)
