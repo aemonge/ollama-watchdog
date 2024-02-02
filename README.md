@@ -65,23 +65,20 @@ To use `ollama-watchdog`, follow these steps:
 -   [x] Apply chunks responses to the Ollama.
 -   [x] Add support for any endpoint like, perplexity.
 -   [ ] Ability to include all types of files, like images.
--   [-] On error, display a message from `system` that tells us the error. Make sure
-    https connection errors are being parsed and sent.
+-   [ ] On error, display a message from `system` that tells us the error. Make sure
+        https connection errors are being parsed and sent.
 -   [-] Omit commented string to prompt `<!-- -->`.
 -   [ ] keep the response linted in markdown, or at least in a max-line-length, so that
         we can remove lines with Tails.
 -   [x] Implement and think how to allow Tails to adapt to shorter terminals/console in
         width.
--   [ ] After a set amount of time with no response from the server, send the buffer to
+-   [x] After a set amount of time with no response from the server, send the buffer to
         markdown and render it. And quite the tail, and watch the file with watchdog to
         be less resource intensive
--   [ ] Use a database to store the conversations.
+-   [x] Use a database to store the conversations.
 -   [ ] Block the input while the responses are being processed or at least queue it and
         trim duplicated.
--   [ ] Use memory for our LLM's https://chatdatabase.github.io/
--   [ ] Store the actual query/prompt sent to local LLM in comments, so that we can
-        inspect it ; and also avoid re-triggering the command when using conversation
-        history
+-   [x] Use memory for our LLM's https://chatdatabase.github.io/
 -   [ ] Allow multi string commands, specially useful for `ask`
 -   [ ] Use only GPU, and raise an error if the GPU isn't been used. This should be a
         configuration.
