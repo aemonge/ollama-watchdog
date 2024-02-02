@@ -80,3 +80,6 @@ input.md
 output.md
 poetry.lock
 example.md
+
+# Data
+sqlite.db

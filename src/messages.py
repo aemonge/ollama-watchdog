@@ -3,7 +3,10 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterator, Mapping
+from typing import Iterator, cast
+from langchain_community.chat_message_histories import SQLChatMessageHistory
+
+from langchain_core.messages import BaseMessageChunk
 
 from src.llm_query import ask_llm
 
@@ -52,7 +55,7 @@ class Messages:
             msg = self.separators["pre"].format(user=content, date=date)
             output.write(msg)
 
-    def _put_content(self, content: str | Iterator[Mapping[str, Any]]) -> None:
+    def _put_content(self, content: str | Iterator[BaseMessageChunk]) -> None:
         """
         Put the title in the dst_file.
 
@@ -61,14 +64,20 @@ class Messages:
         content : str | Iterator[Mapping[str, Any]]
             The message or list of messages to put in the file.
         """
+        on_stream_end = ""
         with open(self.dst_file, "a", os.O_NONBLOCK) as output:
             if isinstance(content, Iterator):
                 for msg in content:
-                    output.write(msg["message"]["content"])
+                    on_stream_end += cast(str, msg.content)
+                    output.write(cast(str, msg.content))
                     output.flush()
             else:
                 output.write(content)
 
+            chat_message_history = SQLChatMessageHistory(
+                session_id="test_session_id", connection_string="sqlite:///sqlite.db"
+            )
+            chat_message_history.add_ai_message(on_stream_end)
             output.write(self.separators["post"])
 
     def inlcude_prompt(self) -> None:

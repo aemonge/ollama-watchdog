@@ -1,55 +1,69 @@
 #!/usr/bin/env python3
 
-"""Watches a file for changes and appends the changes to another file."""
+"""The CLI runner for ollama watch dog with a tail."""
 
-import os
-import time
 from pathlib import Path
 
-import yaml
-from watchdog.observers import Observer
+import click
 
-from src.watch_handler import WatcherHandler
+from src.main import Main
 
-args = {"create-files": True, "keep-input": False}
 
-separators = {
-    "pre": '[comment]: # "--- (**{user}** ({date})"\n\n',
-    "post": "\n\n",
-}
+@click.command()
+@click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
+@click.argument("conversation_file", default="output.md", type=click.Path(exists=True))
+@click.option("--model", default="codebooga:34b-v0.1-q5_0", help="Model to use.")
+def run(prompt_file: str, conversation_file: str, model: str) -> None:
+    """
+    Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
 
-if os.getenv("DEBUG") == "True":
-    import debugpy
+    Description
+    -----------
+    It relays on listening to changes in a file and then responding to it to another
+    file. By default this command line will be tailing the response file, and providing
+    a rich to markdown formatting, allowing an visually pleasant experience in your
+    terminal.
 
-    debugpy.listen(("127.0.0.1", 5678))
-    debugpy.wait_for_client()
+    It uses SQLite to create the conversations between the chat and you.
+
+    Besides this, it also enriches the prompt, by allowing special stings that have
+    trigger different "chains" in the query:
+
+    Prompt Special tags
+    -------------------
+    <-- include: file:///tmp.txt --> : Included the `/tmp.txt` file.
+
+    <-- include: https://www.example.com --> : Includes a summary of the site.
+
+    <-- search: a needle --> : Searches in duckduckgo for "a needle".
+
+    <-- ask: a question --> : Asks in perplexity for "a question".
+
+    <-- run: `ls *` : Includes execution and results of the bash command.
+
+    <!-- I'll be ommited --> : Be aware that comments are NOT send to the prompt.
+
+
+    Usage
+    -----
+    ollama-dog "prompt.md" "conversation.md" --model="codebooga:34b-v0.1-q5_0"
+
+    Parameters
+    ----------
+    prompt_file : str
+        The file to watch for prompts.
+    conversation_file : str
+        The file to watch for responses.
+    model : str
+        The model to use.
+    """
+    main = Main(
+        prompt_file=Path(prompt_file),
+        conversation_file=Path(conversation_file),
+        model=model,
+    )
+    main.run()
+
 
 if __name__ == "__main__":
-    config = yaml.safe_load(open("config.yaml", "r"))
-    input_file = Path(config["input"])
-    output_file = Path(config["output"])
-    model_name = config["model"]
-
-    if (not input_file.exists()) and args["create-files"]:
-        open(input_file, "w").close()
-
-    if (not output_file.exists()) and args["create-files"]:
-        open(output_file, "w").close()
-
-    observer = Observer()
-    observer.schedule(
-        WatcherHandler(
-            src_file=input_file,
-            dst_file=output_file,
-            separators=separators,
-            model_name=model_name,
-        ),
-        path=str(input_file),  # Watch the directory containing the input file
-    )
-    observer.start()
-    try:
-        while True:
-            time.sleep(1)  # Keep the script running
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+    run()

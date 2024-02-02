@@ -2,6 +2,10 @@
 
 from typing import Any, Iterator, Mapping, cast
 
+from langchain.chains import LLMChain
+from langchain.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_community.chat_models import ChatOllama
+from langchain_core.messages import BaseMessageChunk, HumanMessage
 from ollama import Client as OClient, Message
 
 from libs.ask_webllm import ask_web_llm
@@ -10,9 +14,11 @@ from libs.file_include import replace_include_tags
 from libs.http_include import get_website_content
 from libs.remove_comments import remove_comments
 from libs.web_search import search_online
+from langchain_community.chat_message_histories import SQLChatMessageHistory
 
 
-def llm_response(prompt: str, model: str) -> Iterator[Mapping[str, Any]]:
+# def llm_response(prompt: str, model: str) -> Iterator[Mapping[str, Any]]:
+def llm_response(prompt: str, model: str) -> Iterator[BaseMessageChunk]:
     """
     Get the response from a LLM.
 
@@ -28,15 +34,38 @@ def llm_response(prompt: str, model: str) -> Iterator[Mapping[str, Any]]:
     : str
         The response from the LLM.
     """
-    client = OClient(base_url="http://localhost:11434")
-    message = Message(role="user", content=prompt)
-    return cast(
-        Iterator[Mapping[str, Any]],
-        client.chat(model=model, messages=[message], stream=True),
+    chat_message_history = SQLChatMessageHistory(
+        session_id="test_session_id", connection_string="sqlite:///sqlite.db"
     )
+    chat = ChatOllama(model=model)
+
+    chat_message_history.add_user_message(prompt)
+    return chat.stream(chat_message_history.messages)
+    #     [
+    #         HumanMessage(content=prompt),
+    #     ]
+    # )
+    # a = chat.invoke(
+    #     [
+    #         HumanMessage(content=prompt),
+    #     ]
+    # )
+    # print(f"r-> {a.content}")
+    # a.update_forward_refs
+    # prompt_template = PromptTemplate.from_template(prompt)
+    # llmchian = LLMChain(llm=llm, prompt=prompt_template)
+    # return llmchian.invoke()
+
+    # client = OClient(base_url="http://localhost:11434")
+    # message = Message(role="user", content=prompt)
+    # return cast(
+    #     Iterator[Mapping[str, Any]],
+    #     client.chat(model=model, messages=[message], stream=True),
+    # )
 
 
-def ask_llm(contents: str, model: str) -> Iterator[Mapping[str, Any]]:
+# def ask_llm(contents: str, model: str) -> Iterator[Mapping[str, Any]]:
+def ask_llm(contents: str, model: str) -> Iterator[BaseMessageChunk]:
     """
     Process the contents of the input query file.
 

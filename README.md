@@ -83,3 +83,5 @@ To use `ollama-watchdog`, follow these steps:
         inspect it ; and also avoid re-triggering the command when using conversation
         history
 -   [ ] Allow multi string commands, specially useful for `ask`
+-   [ ] Use only GPU, and raise an error if the GPU isn't been used. This should be a
+        configuration.
