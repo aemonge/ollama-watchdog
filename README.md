@@ -40,6 +40,9 @@ To use `ollama-watchdog`, follow these steps:
 -   `<-- search: python llm library -->`: Search using duckduckgo python SDK
 -   `<-- include: file://~/local/path -->`: Include a local file
 -   `<-- include: http(s)://www.example.com -->`: Include a web, using BeautifulSoup
+-   `<-- ask: http(s)://www.example.com -->`: Asks in perplexity for "a question".
+-   `<-- run: 'command' -->`:  Includes execution and results of the bash command.
+-   `<!-- I'll be ommited -->` : Be aware that comments are NOT send to the prompt.
 
 ## Development Plan
 
@@ -82,3 +85,15 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Allow multi string commands, specially useful for `ask`
 -   [ ] Use only GPU, and raise an error if the GPU isn't been used. This should be a
         configuration.
+-   [ ] On the markdown tail, fix the \`\`\` single with no language marks view
+-   [ ] Allow control with special syntax to change the LLM parameters, and SQLite session.
+        > The idea would be to have a system bot, that can change the main threads
+        > conversations, drop in and out some actors. Like an director, that directs
+        > acts (threads) with actors (ai bots). All with the same chat-like
+        > instructions.
+        > Start simple:
+        > 1. list conversations (sessions)
+        > 2. set / switch to session `a`
+        > 3. delete session
+        > 4. set (incognito) ephimeral session (by default?)
+        > 5. change the model
