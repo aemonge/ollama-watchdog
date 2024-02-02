@@ -93,20 +93,25 @@ class Watcher:
 
                 self.last_prompt = current_prompt
 
-    def append_response(self, message: str | Iterator[BaseMessageChunk]) -> None:
+    def receive_message(
+        self, message: str | Iterator[BaseMessageChunk], buffered: bool = True
+    ) -> None:
         """
-        Append the response content to the conversation file.
+        Receive a message and append it to the conversation file.
 
         Parameters
         ----------
         message : Union[str, Iterator[BaseMessageChunk]]
             The content to append to the conversation file.
+        buffered: bool
+            (True) If true, saves the message to avoid duplication
         """
         start_time = time()
         with open(self.conversation_file, "a", os.O_NONBLOCK) as file:
             if isinstance(message, str):
                 file.write(message)
-                self.current_response = message
+                if buffered:
+                    self.current_response = message
             else:
                 for chunk in message:
                     file.write(cast(str, chunk.content))

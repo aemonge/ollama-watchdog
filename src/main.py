@@ -35,7 +35,7 @@ class Main:
             on_prompt=self.chat.ask,
             on_respond=self.chat.remember,
         )
-        self.chat.respond = self.watcher.append_response
+        self.chat.send_message = self.watcher.receive_message
 
     def _parse_args(self) -> None:
         """Use Click to parse the arguments."""
