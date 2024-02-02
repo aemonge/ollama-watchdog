@@ -65,11 +65,11 @@ class Watcher:
     def start(self) -> None:
         """Start watching the files."""
         event_handler = FileSystemEventHandler()
-        event_handler.on_modified = self.on_modified
+        event_handler.on_modified = self._on_modified
         self.prompt_observer.schedule(event_handler, self.prompt_file, recursive=False)
         self.prompt_observer.start()
 
-    def on_modified(self, event: FileSystemEvent) -> None:
+    def _on_modified(self, event: FileSystemEvent) -> None:
         """Call when a file is modified.
 
         Parameters
@@ -110,11 +110,11 @@ class Watcher:
             else:
                 for chunk in message:
                     file.write(cast(str, chunk.content))
+                    file.flush()
                     if time() - start_time > RESPONSE_TIMEOUT:
                         break
+                file.write("\n")
                 self.current_response = "".join(cast(str, x.content) for x in message)
-
-            file.flush()
 
         # Cancel the previous timer if it's still waiting
         if self._response_debounce_timer is not None:

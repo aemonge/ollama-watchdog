@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from src.chat import Chat
 from src.tail import Tail
 from src.watch_dog import Watcher
 
@@ -22,15 +23,19 @@ class Main:
         model : str
             The model to use.
         """
-        self.model = model
-
+        self.tailer = Tail(file=conversation_file)
+        self.chat = Chat(
+            session_id="test_session_id2",
+            connection_string="sqlite:///sqlite.db",
+            model=model,
+        )
         self.watcher = Watcher(
             prompt_file=prompt_file,
             conversation_file=conversation_file,
-            on_prompt=self.on_raw_prompt,
-            on_respond=self.repond,
+            on_prompt=self.chat.ask,
+            on_respond=self.chat.remember,
         )
-        self.tailer = Tail(file=conversation_file)
+        self.chat.respond = self.watcher.append_response
 
     def _parse_args(self) -> None:
         """Use Click to parse the arguments."""
@@ -45,25 +50,3 @@ class Main:
     def stop(self) -> None:
         """Safely close database and file watcher, to nicely stop the program."""
         pass
-
-    def on_raw_prompt(self, content: str) -> None:
-        """
-        On raw prompt from file, chat with the LLM.
-
-        Parameters
-        ----------
-        content : str
-            The raw content from the prompt file.
-        """
-        self.watcher.append_response(content)  # Just echo it for the time being
-
-    def repond(self, content: str) -> None:
-        """
-        Hold the place to save the response in the DB.
-
-        Parameters
-        ----------
-        content : str
-            The raw response from the LLM.
-        """
-        print("Save me to DB", content)
