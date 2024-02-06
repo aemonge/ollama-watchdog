@@ -1,9 +1,11 @@
 """Here we will define the LLM conversation."""
 
-from typing import AsyncIterator, Awaitable, Callable, cast
+import asyncio
+from typing import AsyncIterator, Awaitable, Callable
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_community.chat_models import ChatOllama
+from langchain_core.messages import HumanMessage
 from langchain_core.messages.base import BaseMessageChunk
 
 from src.libs.ask_webllm import ask_web_llm
@@ -16,42 +18,49 @@ from src.models.message_event import MessageEvent
 from src.models.subscriber import Subscriber
 
 
+async def mock_astream() -> AsyncIterator[BaseMessageChunk]:
+    yield BaseMessageChunk("hello")
+    await asyncio.sleep(0.1)  # Simulate some delay
+    yield BaseMessageChunk(" | ")
+    await asyncio.sleep(0.1)  # Simulate some delay
+    yield BaseMessageChunk("world")
+
+
 class Chatter(Subscriber):
     """The main chat interface."""
 
     def __init__(
         self,
-        session_id: str,
-        connection_string: str,
         model: str,
         publish_callback: Callable[[MessageEvent], Awaitable[None]],
+        history: SQLChatMessageHistory,
     ) -> None:
         """
         Construct the LLM chat with SQLite.
 
         Parameters
         ----------
-        session_id : str
-            The session ID for the chat.
-        connection_string : str
-            The connection string for the SQLite database.
         model : str
             The model to use for the LLM.
         publish_callback: Callable[[MessageEvent], Awaitable[None]]
             The callback to publish the event.
+        history: SQLChatMessageHistory
+            The stored messages in the database.
         """
         self.model = model
-        self.history = SQLChatMessageHistory(
-            session_id=session_id, connection_string=connection_string
-        )
         self.llm = ChatOllama(model=model)
         self.publish_event = publish_callback
+        self.history = history
 
     def _chain_prompt(self, prompt: str) -> str:
         """
         Process the prompt with several chains, and enhancers.
 
         And then saves it in the DB.
+
+        Todo
+        ----
+        [ ] Use me.....
 
         Parameters
         ----------
@@ -80,18 +89,21 @@ class Chatter(Subscriber):
         event : MessageEvent
             The event to process.
         """
-        prompt = self._chain_prompt(cast(str, event.contents))
-        # self.history.add_user_message(prompt)  # TODO: Make as an event.
+        _ = event
+        if not self.history.messages or not isinstance(
+            self.history.messages[-1], HumanMessage
+        ):
+            return
 
-        # CREATE AND FIRE THE EVENT
-        # self.llm.astream(prompt)
+        message_chunks: AsyncIterator[BaseMessageChunk] = self.llm.astream(
+            self.history.messages
+        )
 
-        # self.history.add_ai_message(when_stream_end)  # TODO: Make as an event.
-
-        # Create an instance of the AsyncIterator[BaseMessageChunk] event
-        message_chunks: AsyncIterator[BaseMessageChunk] = self.llm.astream(prompt)
-
-        # Publish the new event
         await self.publish_event(
-            MessageEvent("messageChunks", "", self.model, message_chunks)
+            MessageEvent(
+                "ai_message",
+                self.model,
+                message_chunks,
+                callback=self.history.add_ai_message,
+            )
         )

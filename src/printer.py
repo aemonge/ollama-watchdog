@@ -15,8 +15,7 @@ Todo
 [ ] Fix issue with block code with no language.
 """
 import re
-from datetime import datetime
-from typing import AsyncIterator, cast
+from typing import Any, AsyncIterator, Callable, Optional, cast
 
 from langchain_core.messages.base import BaseMessageChunk
 from rich.console import Console
@@ -133,14 +132,14 @@ class Printer(Subscriber):
         is_line = re.compile(pattern, re.MULTILINE | re.DOTALL)
         return bool(is_line.search(self._buffer))
 
-    def title(self, author: str) -> str:
+    def title(self, event: MessageEvent) -> str:
         """
         Print the title, prettier.
 
         Parameters
         ----------
-        author : str
-            The raw title
+        event : MessageEvent
+            The message from where to extract the author and date.
 
         Returns
         -------
@@ -148,10 +147,14 @@ class Printer(Subscriber):
             A pretty title
         """
         title = '[comment]: # "--- (**{author}** ({date}))"'
-        date = datetime.now().strftime("%a, %d %b %H:%M - %Y")
-        return title.format(author=author, date=date) + "\n\n"
+        date = event.created_at.strftime("%a, %d %b %H:%M - %Y")
+        return title.format(author=event.author, date=date) + "\n\n"
 
-    async def pretty_print(self, text: str | AsyncIterator[BaseMessageChunk]) -> None:
+    async def pretty_print(
+        self,
+        text: str | AsyncIterator[BaseMessageChunk],
+        callback: Optional[Callable[[Any], Any]] = None,
+    ) -> None:
         """
         Process the text.
 
@@ -159,6 +162,8 @@ class Printer(Subscriber):
         ----------
         text : str
             The text to process
+        callback: Optional[Callable[[Any], Any]]
+            The callback to call when the text is fully processed.
 
         Raises
         ------
@@ -174,10 +179,16 @@ class Printer(Subscriber):
             for char in text:
                 self._print_char(char, column)
         elif isinstance(text, AsyncIterator):
+            full_text = ""
             async for chunk in text:
                 for char in chunk.content:
+                    full_text += cast(str, char)
                     self._print_char(cast(str, char), column)
             self._print_char("\n", column)
+            full_text += "\n"
+
+            if callback is not None:
+                callback(full_text)
 
     def _print_char(self, char: str, column: int) -> None:
         """
@@ -215,6 +226,6 @@ class Printer(Subscriber):
             The event to process.
         """
         if event.author:
-            await self.pretty_print(self.title(event.author))
+            await self.pretty_print(self.title(event))
 
-        await self.pretty_print(event.contents)
+        await self.pretty_print(event.contents, event.callback)

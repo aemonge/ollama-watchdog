@@ -65,9 +65,7 @@ class Watcher(FileSystemEventHandler):
             ):
                 self.last_content = current_content  # Update the last content
                 # Create a dictionary to hold the event data
-                event_data = MessageEvent(
-                    "fileChanges", event.src_path, self.user, current_content
-                )
+                event_data = MessageEvent("human_message", self.user, current_content)
                 # Ensure callback is a coroutine function and schedule it to be run
                 coroutine = self.callback(event_data)  # This should now be a coroutine
                 asyncio.run_coroutine_threadsafe(coroutine, self.loop)

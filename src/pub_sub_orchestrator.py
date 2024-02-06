@@ -7,6 +7,7 @@ from src.chatter import Chatter
 from src.models.message_event import MessageEvent
 from src.models.subscriber import Subscriber
 from src.printer import Printer
+from src.recorder import Recorder
 from src.watcher import Watcher
 
 
@@ -26,16 +27,15 @@ class PubSubOrchestrator:
         """
         self.filename = prompt_file
 
+        self.processed_events: set = set()  # Set to store processed event timestamps
         self.subscribers: list = []
         self.printer = Printer()
-        self.chatter = Chatter(
-            str(uuid4()), "sqlite:///sqlite.db", model, self.publish_event
-        )
-        self.add_subscriber(self.printer)
-        self.add_subscriber(self.chatter)
+        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db")
+        self.chatter = Chatter(model, self.publish, self.recorder.history)
 
-    async def publish_event(self, event: MessageEvent) -> None:
-        await self.publish(event)
+        self.add_subscriber(self.printer)
+        self.add_subscriber(self.recorder)
+        self.add_subscriber(self.chatter)
 
     def add_subscriber(self, subscriber: Subscriber) -> None:
         """
@@ -70,6 +70,12 @@ class PubSubOrchestrator:
         """
         for subscriber in self.subscribers:
             await subscriber.process_event(event)
+        # Convert event.created_at to a comparable format if necessary, e.g., timestamp
+        event_timestamp = event.created_at.timestamp()
+        if event_timestamp not in self.processed_events:
+            for subscriber in self.subscribers:
+                await subscriber.process_event(event)
+            self.processed_events.add(event_timestamp)  # Mark event as processed
 
     async def start(self) -> None:
         """Asynchronously runs the main program."""
