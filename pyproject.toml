@@ -16,6 +16,9 @@ markdown = "^3.5.2"
 openai = "^1.10.0"
 langchain = "^0.1.4"
 click = "^8.1.7"
+twisted = "^23.10.0"
+hachiko = "^0.4.0"
+service-identity = "^24.1.0"
 
 [tool.poetry.group.dev.dependencies]
 ipdb = "^0.13.13"

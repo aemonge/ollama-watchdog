@@ -1,69 +1,44 @@
-#!/usr/bin/env python3
+# At the very top of your main.py, before any other imports
+import asyncio
+from twisted.internet import asyncioreactor
+asyncioreactor.install(asyncio.get_event_loop())
 
-"""The CLI runner for ollama watch dog with a tail."""
+from twisted.internet import endpoints, reactor
+from twisted.protocols import basic
+from src.echo import Chatter
+from src.watch_dog import Watcher
 
-from pathlib import Path
+class PubSubOrchestrator:
+    def __init__(self):
+        self.subscribers = []
 
-import click
+    def add_subscriber(self, subscriber):
+        self.subscribers.append(subscriber)
 
-from src.main import Main
+    def remove_subscriber(self, subscriber):
+        self.subscribers.remove(subscriber)
 
+    async def publish(self, message):
+        for subscriber in self.subscribers:
+            # Ensure that process_event is awaited
+            await subscriber.process_event(message)
 
-@click.command()
-@click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
-@click.argument("conversation_file", default="output.md", type=click.Path(exists=True))
-@click.option("--model", default="codebooga:34b-v0.1-q5_0", help="Model to use.")
-def run(prompt_file: str, conversation_file: str, model: str) -> None:
-    """
-    Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
-
-    Description
-    -----------
-    It relays on listening to changes in a file and then responding to it to another
-    file. By default this command line will be tailing the response file, and providing
-    a rich to markdown formatting, allowing an visually pleasant experience in your
-    terminal.
-
-    It uses SQLite to create the conversations between the chat and you.
-
-    Besides this, it also enriches the prompt, by allowing special stings that have
-    trigger different "chains" in the query:
-
-    Prompt Special tags
-    -------------------
-    <-- include: file:///tmp.txt --> : Included the `/tmp.txt` file.
-
-    <-- include: https://www.example.com --> : Includes a summary of the site.
-
-    <-- search: a needle --> : Searches in duckduckgo for "a needle".
-
-    <-- ask: a question --> : Asks in perplexity for "a question".
-
-    <-- run: `ls *` : Includes execution and results of the bash command.
-
-    <!-- I'll be ommited --> : Be aware that comments are NOT send to the prompt.
-
-
-    Usage
-    -----
-    ollama-dog "prompt.md" "conversation.md" --model="codebooga:34b-v0.1-q5_0"
-
-    Parameters
-    ----------
-    prompt_file : str
-        The file to watch for prompts.
-    conversation_file : str
-        The file to watch for responses.
-    model : str
-        The model to use.
-    """
-    main = Main(
-        prompt_file=Path(prompt_file),
-        conversation_file=Path(conversation_file),
-        model=model,
-    )
-    main.run()
-
+async def main_async(orchestrator, filename):
+    loop = asyncio.get_event_loop()
+    # Pass the orchestrator.publish method directly as it is now a coroutine
+    watcher = Watcher(filename, loop, orchestrator.publish)
+    observer = watcher.start_watching()
+    try:
+        await asyncio.Event().wait()  # Run forever
+    finally:
+        observer.stop()
 
 if __name__ == "__main__":
-    run()
+    orchestrator = PubSubOrchestrator()
+    # Setup Chatter and add it to the orchestrator
+    chatter = Chatter(print)
+    orchestrator.add_subscriber(chatter)
+    # Start the asyncio event loop with the watcher
+    filename = "input.md"
+    asyncio.ensure_future(main_async(orchestrator, filename))
+    reactor.run()
