@@ -1,21 +1,58 @@
-import asyncio
-import os
+"""Monitors file changes and triggers a callback."""
 
-from watchdog.events import FileSystemEventHandler
+import asyncio
+from typing import Any, Callable, Optional
+
+from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
+
+from src.file_change_event import FileChangeEvent
 
 
 class Watcher(FileSystemEventHandler):
-    def __init__(self, filename, loop, callback, filter_duplicated_content=True):
+    """Monitors file changes and triggers a callback."""
+
+    def __init__(
+        self,
+        filename: str,
+        loop: asyncio.AbstractEventLoop,
+        callback: Callable[[FileChangeEvent], Any],
+        filter_duplicated_content: Optional[bool] = True,
+    ) -> None:
+        """
+        Initialize the Watcher.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to watch.
+        loop : asyncio.AbstractEventLoop
+            The event loop to run asynchronous tasks.
+        callback : Callable[[FileChangeEvent], Any]
+            The callback function to be called when a file is modified.
+        filter_duplicated_content : bool, optional
+            Whether to filter out events with duplicated content (default is True).
+        """
         super().__init__()
         print("Watching")
-        self.filename = filename
-        self.loop = loop
-        self.callback = callback
+        self.filename: str = filename
+        self.loop: asyncio.AbstractEventLoop = loop
+        self.callback: Callable[[FileChangeEvent], Any] = callback
         self.filter_duplicated_content = filter_duplicated_content
-        self.last_content = None
+        self.last_content: Optional[str] = None
 
-    def on_modified(self, event):
+    def on_modified(self, event: FileModifiedEvent) -> None:
+        """
+        Call when a file is modified.
+
+        If filtering is enabled, it checks for content changes before
+        triggering the callback.
+
+        Parameters
+        ----------
+        event : FileModifiedEvent
+            The event object representing the file modification.
+        """
         if event.src_path.endswith(self.filename):
             # Read the contents of the file
             with open(event.src_path, "r") as file:
@@ -27,17 +64,23 @@ class Watcher(FileSystemEventHandler):
             ):
                 self.last_content = current_content  # Update the last content
                 # Create a dictionary to hold the event data
-                event_data = {
-                    "type": "fileChanges",
-                    "filename": event.src_path,
-                    "contents": current_content,
-                }
+                event_data = FileChangeEvent(
+                    "fileChanges", event.src_path, current_content
+                )
                 # Ensure callback is a coroutine function and schedule it to be run
                 coroutine = self.callback(event_data)  # This should now be a coroutine
                 asyncio.run_coroutine_threadsafe(coroutine, self.loop)
             # If the content is the same and filtering is enabled, do nothing
 
-    def start_watching(self):
+    def start_watching(self) -> Observer:
+        """
+        Start the observing, and begin watching for file modifications.
+
+        Returns
+        -------
+        Observer
+            The observer instance that is watching the file.
+        """
         observer = Observer()
         observer.schedule(self, ".", recursive=False)
         observer.start()
