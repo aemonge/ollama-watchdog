@@ -97,3 +97,6 @@ To use `ollama-watchdog`, follow these steps:
         > 3. delete session
         > 4. set (incognito) ephimeral session (by default?)
         > 5. change the model
+
+- [ ] (printer) Stop the buffer on <EOF> or <EOB> block end signals
+- [ ] (printer) Fix issue with block code with no language.

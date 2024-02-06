@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-
-# noqa: W503
-
 """
-Tails a file in markdown rich format.
+Pretty print markdown and blocks of markdown.
 
 Making sure when a code block if found it will "wait" for it to have it's finishing
 tag before printing it. This way the code block is printed out as a whole and Rich
@@ -12,38 +8,30 @@ can interpret the MD correctly.
 This also prints directly the characters that don't start with special markdown syntax.
 Basically we would wait for titles, strong, italic, etc; every other character will be
 printed directly.
+
+Todo
+----
+[ ] Stop the buffer on <EOF> or <EOB> block end signals
+[ ] Fix issue with block code with no language.
 """
-
-
-import os
 import re
-import time
-from io import TextIOWrapper
+from datetime import datetime
+from typing import AsyncIterator, cast
 
+from langchain_core.messages.base import BaseMessageChunk
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
 
-if os.getenv("DEBUG") == "True":
-    import debugpy
-
-    debugpy.listen(("127.0.0.1", 5678))
-    debugpy.wait_for_client()
+from src.models.message_event import MessageEvent
+from src.models.subscriber import Subscriber
 
 
-class Tail:
-    """Tails a file, and applies markdown syntax to it."""
+class Printer(Subscriber):
+    """Print with beautiful markdown."""
 
-    def __init__(self, file: TextIOWrapper) -> None:
-        """
-        Initialize the Tails class with regex expressions.
-
-        Parameters
-        ----------
-        file : TextIOWrapper
-            The main file path to tail and process
-        """
-        self.file = file
+    def __init__(self) -> None:
+        """Construct a new Printer."""
         self.console = Console()
         self._buffer = ""
         self._spinId = 0
@@ -112,7 +100,7 @@ class Tail:
         : bool
             If it IS a multi-line block.
         """
-        code_starts = re.compile(r"^\n?```\w*", re.MULTILINE | re.DOTALL)
+        code_starts = re.compile(r"^\n?```", re.MULTILINE | re.DOTALL)
         code_ends = re.compile(r"```.?$", re.MULTILINE | re.DOTALL)
         if code_starts.search(self._buffer):
             return not code_ends.search(self._buffer)
@@ -145,9 +133,32 @@ class Tail:
         is_line = re.compile(pattern, re.MULTILINE | re.DOTALL)
         return bool(is_line.search(self._buffer))
 
-    def tail(self) -> None:
+    def title(self, author: str) -> str:
         """
-        Tail and process the file.
+        Print the title, prettier.
+
+        Parameters
+        ----------
+        author : str
+            The raw title
+
+        Returns
+        -------
+        : str
+            A pretty title
+        """
+        title = '[comment]: # "--- (**{author}** ({date}))"'
+        date = datetime.now().strftime("%a, %d %b %H:%M - %Y")
+        return title.format(author=author, date=date) + "\n\n"
+
+    async def pretty_print(self, text: str | AsyncIterator[BaseMessageChunk]) -> None:
+        """
+        Process the text.
+
+        Parameters
+        ----------
+        text : str
+            The text to process
 
         Raises
         ------
@@ -159,27 +170,51 @@ class Tail:
         if column < 0:
             raise ValueError("Console width is too small.")
 
-        while True:
-            if not (char := file.read(1)):
-                time.sleep(3e-2)  # sleep 200 milliseconds
-                continue
+        if isinstance(text, str):
+            for char in text:
+                self._print_char(char, column)
+        elif isinstance(text, AsyncIterator):
+            async for chunk in text:
+                for char in chunk.content:
+                    self._print_char(cast(str, char), column)
+            self._print_char("\n", column)
 
-            if char == "\n":
-                if self.is_multiline_block():
-                    self.console.print(" ", end="")
-                    column -= 1
-                else:
-                    self.clear_and_render()
-                    column = self.console.width
-            elif column > 0:
-                self.console.print(char, end="")
+    def _print_char(self, char: str, column: int) -> None:
+        """
+        Process the text.
+
+        Parameters
+        ----------
+        char : str
+            The char to process
+        column: int
+            The column to process
+        """
+        if char == "\n":
+            if self.is_multiline_block():
+                self.console.print(" ", end="")
                 column -= 1
-            elif self.spinner is not None:
-                self._print_spinner()
+            else:
+                self.clear_and_render()
+                column = self.console.width
+        elif column > 0:
+            self.console.print(char, end="")
+            column -= 1
+        elif self.spinner is not None:
+            self._print_spinner()
 
-            self._buffer += char
+        self._buffer += char
 
+    async def process_event(self, event: MessageEvent) -> None:
+        """
+        Procese the event and returns the processed event.
 
-with open("output.md", "r") as file:
-    tail = Tail(file=file)
-    tail.tail()
+        Parameters
+        ----------
+        event : MessageEvent
+            The event to process.
+        """
+        if event.author:
+            await self.pretty_print(self.title(event.author))
+
+        await self.pretty_print(event.contents)

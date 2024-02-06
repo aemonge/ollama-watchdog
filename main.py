@@ -1,88 +1,72 @@
-"""The main twisted PUB/SUB Orchestrate."""
+#!/usr/bin/env python3
+
+"""The CLI runner for ollama watch dog with a tail."""
 
 import asyncio
 
+import click
 from twisted.internet import asyncioreactor
 
-from src.file_change_event import FileChangeEvent
+from src.pub_sub_orchestrator import PubSubOrchestrator
 
 asyncioreactor.install(asyncio.get_event_loop())
 
-from twisted.internet import reactor
-
-from src.echo import Chatter
-from src.watch_dog import Watcher
+from twisted.internet import reactor  # noqa: E402
 
 
-class PubSubOrchestrator:
-    """Manages subscribers and publishes messages."""
-
-    def __init__(self) -> None:
-        """Initialize the PubSubOrchestrator."""
-        self.subscribers: list[Chatter] = []
-
-    def add_subscriber(self, subscriber: Chatter) -> None:
-        """
-        Add a subscriber to the orchestrator.
-
-        Parameters
-        ----------
-        subscriber : Chatter
-            The subscriber to add.
-        """
-        self.subscribers.append(subscriber)
-
-    def remove_subscriber(self, subscriber: Chatter) -> None:
-        """
-        Remove the subscriber from the orchestrator.
-
-        Parameters
-        ----------
-        subscriber : Chatter
-            The subscriber to remove.
-        """
-        self.subscribers.remove(subscriber)
-
-    async def publish(self, event: FileChangeEvent) -> None:
-        """
-        Publish the message to all subscribers.
-
-        Parameters
-        ----------
-        event : FileChangeEvent
-            The event message to publish.
-        """
-        for subscriber in self.subscribers:
-            await subscriber.process_event(event)
-
-
-async def main_async(orchestrator: PubSubOrchestrator, filename: str) -> None:
+@click.command()
+@click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
+@click.option("--model", default="codebooga:34b-v0.1-q5_0", help="Model to use.")
+def run(prompt_file: str, model: str) -> None:
     """
-    Asynchronously runs the main program.
+    Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
+
+    Description
+    -----------
+    It relays on listening to changes in a file and then responding to it to another
+    file. By default this command line will be tailing the response file, and providing
+    a rich to markdown formatting, allowing an visually pleasant experience in your
+    terminal.
+
+    It uses SQLite to create the conversations between the chat and you.
+
+    Besides this, it also enriches the prompt, by allowing special stings that have
+    trigger different "chains" in the query:
+
+    Prompt Special tags
+    -------------------
+    <-- include: file:///tmp.txt --> : Included the `/tmp.txt` file.
+
+    <-- include: https://www.example.com --> : Includes a summary of the site.
+
+    <-- search: a needle --> : Searches in duckduckgo for "a needle".
+
+    <-- ask: a question --> : Asks in perplexity for "a question".
+
+    <-- run: `ls *` : Includes execution and results of the bash command.
+
+    <!-- I'll be ommited --> : Be aware that comments are NOT send to the prompt.
+
+
+    Usage
+    -----
+    ollama-dog "prompt.md" "conversation.md" --model="codebooga:34b-v0.1-q5_0"
 
     Parameters
     ----------
-    orchestrator : PubSubOrchestrator
-        The orchestrator instance to use for publishing messages.
-    filename : str
-        The name of the file to watch for modifications.
+    prompt_file : str
+        The file to watch for prompts.
+    model : str
+        The model to use.
     """
-    loop = asyncio.get_event_loop()
-    watcher = Watcher(filename, loop, orchestrator.publish)
-    observer = watcher.start_watching()
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    finally:
-        observer.stop()
+    orchestrator = PubSubOrchestrator(
+        prompt_file=prompt_file,
+        model=model,
+    )
+
+    asyncio.ensure_future(orchestrator.start())
+    reactor.run()  # type: ignore
 
 
 if __name__ == "__main__":
-    orchestrator = PubSubOrchestrator()
-
-    chatter = Chatter(print)
-    orchestrator.add_subscriber(chatter)
-
-    filename = "input.md"
-    asyncio.ensure_future(main_async(orchestrator, filename))
-    reactor.run()
+    run()
