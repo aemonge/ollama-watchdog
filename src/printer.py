@@ -15,7 +15,7 @@ Todo
 [ ] Fix issue with block code with no language.
 """
 import re
-from typing import AsyncIterator, cast
+from typing import AsyncIterator
 
 from langchain_core.messages.base import BaseMessageChunk
 from rich.console import Console
@@ -56,8 +56,9 @@ class Printer(PublisherSubscriber):
             "   • ",
         ]
 
+        self._column = self.console.width
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
-        self._spin_char_len = len(self.spinner[0]) - 1
+        self._spin_char_len = len(self.spinner[0])
 
     def _print_spinner(self) -> None:
         """Print a loading spinner."""
@@ -80,6 +81,7 @@ class Printer(PublisherSubscriber):
         md = Markdown(self._buffer, code_theme="native", justify="left")
         self.console.print(md)
         self._buffer = ""
+        self._column = self.console.width
 
     def is_multiline_block(self) -> bool:
         """
@@ -152,27 +154,25 @@ class Printer(PublisherSubscriber):
         ValueError
             If the console width is too small.
         """
-        column = self.console.width
+        self._column = self.console.width
 
-        if column < 0:
+        if self._column < 0:
             raise ValueError("Console width is too small.")
 
         if isinstance(text, str):
             for char in text:
-                self._print_char(char, column)
+                self._print_char(char)
         elif isinstance(text, AsyncIterator):
-            full_text = ""
             async for chunk in text:
                 for char in chunk.content:
-                    full_text += cast(str, char)
-                    self._print_char(cast(str, char), column)
-            self._print_char("\n", column)
-            full_text += "\n"
+                    if isinstance(char, str):
+                        self._print_char(char)
+            self._print_char("\n")
 
-            event_data = MessageEvent("ai_message", author, full_text)
+            event_data = MessageEvent("ai_message", author, self._buffer)
             await self.publish(["record"], event_data)
 
-    def _print_char(self, char: str, column: int) -> None:
+    def _print_char(self, char: str) -> None:
         """
         Process the text.
 
@@ -180,19 +180,17 @@ class Printer(PublisherSubscriber):
         ----------
         char : str
             The char to process
-        column: int
-            The column to process
         """
         if char == "\n":
             if self.is_multiline_block():
                 self.console.print(" ", end="")
-                column -= 1
+                self._column -= 1
             else:
                 self.clear_and_render()
-                column = self.console.width
-        elif column > 0:
+                self._column = self.console.width
+        elif self._column > 0:
             self.console.print(char, end="")
-            column -= 1
+            self._column -= 1
         elif self.spinner is not None:
             self._print_spinner()
 
