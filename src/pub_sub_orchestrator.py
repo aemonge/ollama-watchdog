@@ -1,11 +1,12 @@
 """Manages subscribers and publishes messages."""
 
 import asyncio
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from src.chatter import Chatter
-from src.models.message_event import MessageEvent
-from src.models.subscriber import Subscriber
+from src.models.message_event import MessageEvent, TopicsLiteral
+from src.models.publish_subscribe_class import PublisherSubscriber
 from src.printer import Printer
 from src.recorder import Recorder
 from src.watcher import Watcher
@@ -28,54 +29,68 @@ class PubSubOrchestrator:
         self.filename = prompt_file
 
         self.processed_events: set = set()  # Set to store processed event timestamps
-        self.subscribers: list = []
-        self.printer = Printer()
-        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db")
+        self.subscribers: Dict[TopicsLiteral, list] = {
+            "print": [],
+            "record": [],
+            "chain": [],
+        }
+        self.printer = Printer(self.publish)
+        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
         self.chatter = Chatter(model, self.publish, self.recorder.history)
 
-        self.add_subscriber(self.printer)
-        self.add_subscriber(self.recorder)
-        self.add_subscriber(self.chatter)
+        self.add_subscriber("print", self.printer)
+        self.add_subscriber("record", self.recorder)
+        self.add_subscriber("chain", self.chatter)
 
-    def add_subscriber(self, subscriber: Subscriber) -> None:
+    def add_subscriber(
+        self, topic: TopicsLiteral, subscriber: PublisherSubscriber
+    ) -> None:
         """
         Add a subscriber to the orchestrator.
 
         Parameters
         ----------
-        subscriber : Subscriber
+        topic: TopicsLiteral
+            The topic to subscriber the event from.
+        subscriber : PublisherSubscriber
             The subscriber to add.
         """
-        self.subscribers.append(subscriber)
+        self.subscribers[topic].append(subscriber)
 
-    def remove_subscriber(self, subscriber: Subscriber) -> None:
+    def remove_subscriber(
+        self, topic: TopicsLiteral, subscriber: PublisherSubscriber
+    ) -> None:
         """
         Remove the subscriber from the orchestrator.
 
         Parameters
         ----------
-        subscriber : Subscriber
+        topic: TopicsLiteral
+            The topic to subscriber the event from.
+        subscriber : PublisherSubscriber
             The subscriber to remove.
         """
-        self.subscribers.remove(subscriber)
+        self.subscribers[topic].remove(subscriber)
 
-    async def publish(self, event: MessageEvent) -> None:
+    async def publish(
+        self, topics: List[TopicsLiteral], event: MessageEvent  # noqa: U100
+    ) -> Optional[MessageEvent]:
         """
         Publish the message to all subscribers.
 
         Parameters
         ----------
+        topics: List[TopicsLiteral]
+            The topics to subscriber the event from.
         event : MessageEvent
             The event message to publish.
         """
-        for subscriber in self.subscribers:
-            await subscriber.process_event(event)
-        # Convert event.created_at to a comparable format if necessary, e.g., timestamp
-        event_timestamp = event.created_at.timestamp()
-        if event_timestamp not in self.processed_events:
-            for subscriber in self.subscribers:
-                await subscriber.process_event(event)
-            self.processed_events.add(event_timestamp)  # Mark event as processed
+        for topic in topics:
+            event_id = f"{topic}-{event.created_at.timestamp()}"
+            if event_id not in self.processed_events:
+                for subscriber in self.subscribers[topic]:
+                    await subscriber.process_event(event)
+                self.processed_events.add(event_id)  # Mark event as processed
 
     async def start(self) -> None:
         """Asynchronously runs the main program."""

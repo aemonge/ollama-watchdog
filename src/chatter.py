@@ -1,11 +1,9 @@
 """Here we will define the LLM conversation."""
 
-import asyncio
-from typing import AsyncIterator, Awaitable, Callable
+from typing import AsyncIterator
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages import HumanMessage
 from langchain_core.messages.base import BaseMessageChunk
 
 from src.libs.ask_webllm import ask_web_llm
@@ -15,24 +13,16 @@ from src.libs.http_include import get_website_content
 from src.libs.remove_comments import remove_comments
 from src.libs.web_search import search_online
 from src.models.message_event import MessageEvent
-from src.models.subscriber import Subscriber
+from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
-async def mock_astream() -> AsyncIterator[BaseMessageChunk]:
-    yield BaseMessageChunk("hello")
-    await asyncio.sleep(0.1)  # Simulate some delay
-    yield BaseMessageChunk(" | ")
-    await asyncio.sleep(0.1)  # Simulate some delay
-    yield BaseMessageChunk("world")
-
-
-class Chatter(Subscriber):
+class Chatter(PublisherSubscriber):
     """The main chat interface."""
 
     def __init__(
         self,
         model: str,
-        publish_callback: Callable[[MessageEvent], Awaitable[None]],
+        publish: PublisherCallback,
         history: SQLChatMessageHistory,
     ) -> None:
         """
@@ -42,14 +32,14 @@ class Chatter(Subscriber):
         ----------
         model : str
             The model to use for the LLM.
-        publish_callback: Callable[[MessageEvent], Awaitable[None]]
-            The callback to publish the event.
+        publish : PublisherCallback
+            publish a new event to parent
         history: SQLChatMessageHistory
             The stored messages in the database.
         """
         self.model = model
         self.llm = ChatOllama(model=model)
-        self.publish_event = publish_callback
+        self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self.history = history
 
     def _chain_prompt(self, prompt: str) -> str:
@@ -90,20 +80,18 @@ class Chatter(Subscriber):
             The event to process.
         """
         _ = event
-        if not self.history.messages or not isinstance(
-            self.history.messages[-1], HumanMessage
-        ):
+        if not self.history.messages:
             return
 
         message_chunks: AsyncIterator[BaseMessageChunk] = self.llm.astream(
             self.history.messages
         )
 
-        await self.publish_event(
+        await self.publish(
+            ["print"],
             MessageEvent(
                 "ai_message",
                 self.model,
                 message_chunks,
-                callback=self.history.add_ai_message,
-            )
+            ),
         )

@@ -15,7 +15,7 @@ Todo
 [ ] Fix issue with block code with no language.
 """
 import re
-from typing import Any, AsyncIterator, Callable, Optional, cast
+from typing import AsyncIterator, cast
 
 from langchain_core.messages.base import BaseMessageChunk
 from rich.console import Console
@@ -23,14 +23,21 @@ from rich.markdown import Markdown
 from rich.text import Text
 
 from src.models.message_event import MessageEvent
-from src.models.subscriber import Subscriber
+from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
-class Printer(Subscriber):
+class Printer(PublisherSubscriber):
     """Print with beautiful markdown."""
 
-    def __init__(self) -> None:
-        """Construct a new Printer."""
+    def __init__(self, publish: PublisherCallback) -> None:
+        """
+        Construct a new Printer.
+
+        Parameters
+        ----------
+        publish : PublisherCallback
+            publish a new event to parent
+        """
         self.console = Console()
         self._buffer = ""
         self._spinId = 0
@@ -49,6 +56,7 @@ class Printer(Subscriber):
             "   • ",
         ]
 
+        self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self._spin_char_len = len(self.spinner[0]) - 1
 
     def _print_spinner(self) -> None:
@@ -148,12 +156,10 @@ class Printer(Subscriber):
         """
         title = '[comment]: # "--- (**{author}** ({date}))"'
         date = event.created_at.strftime("%a, %d %b %H:%M - %Y")
-        return title.format(author=event.author, date=date) + "\n\n"
+        return title.format(author=event.author, date=date) + "\n"
 
     async def pretty_print(
-        self,
-        text: str | AsyncIterator[BaseMessageChunk],
-        callback: Optional[Callable[[Any], Any]] = None,
+        self, text: str | AsyncIterator[BaseMessageChunk], author: str
     ) -> None:
         """
         Process the text.
@@ -162,8 +168,8 @@ class Printer(Subscriber):
         ----------
         text : str
             The text to process
-        callback: Optional[Callable[[Any], Any]]
-            The callback to call when the text is fully processed.
+        author : str
+            The author of the event to publish
 
         Raises
         ------
@@ -176,8 +182,8 @@ class Printer(Subscriber):
             raise ValueError("Console width is too small.")
 
         if isinstance(text, str):
-            for char in text:
-                self._print_char(char, column)
+            md = Markdown(text, code_theme="native", justify="left")
+            self.console.print(md)
         elif isinstance(text, AsyncIterator):
             full_text = ""
             async for chunk in text:
@@ -187,8 +193,8 @@ class Printer(Subscriber):
             self._print_char("\n", column)
             full_text += "\n"
 
-            if callback is not None:
-                callback(full_text)
+            event_data = MessageEvent("ai_message", author, full_text)
+            await self.publish(["record"], event_data)
 
     def _print_char(self, char: str, column: int) -> None:
         """
@@ -225,7 +231,10 @@ class Printer(Subscriber):
         event : MessageEvent
             The event to process.
         """
-        if event.author:
-            await self.pretty_print(self.title(event))
+        if event.contents is None or event.author is None:
+            return
 
-        await self.pretty_print(event.contents, event.callback)
+        if event.author:
+            await self.pretty_print(self.title(event), event.author)
+
+        await self.pretty_print(event.contents, event.author)

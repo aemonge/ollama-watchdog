@@ -1,23 +1,24 @@
-"""Monitors file changes and triggers a callback."""
+"""Monitors file changes and publishes an event."""
 
 import asyncio
 import os
-from typing import Any, Callable, Optional
+from typing import Optional
 
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from src.models.message_event import MessageEvent
+from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
-class Watcher(FileSystemEventHandler):
-    """Monitors file changes and triggers a callback."""
+class Watcher(FileSystemEventHandler, PublisherSubscriber):
+    """Monitors file changes and triggers a event publish."""
 
     def __init__(
         self,
         filename: str,
         loop: asyncio.AbstractEventLoop,
-        callback: Callable[[MessageEvent], Any],
+        publish: PublisherCallback,
         filter_duplicated_content: Optional[bool] = True,
     ) -> None:
         """
@@ -29,15 +30,16 @@ class Watcher(FileSystemEventHandler):
             The name of the file to watch.
         loop : asyncio.AbstractEventLoop
             The event loop to run asynchronous tasks.
-        callback : Callable[[MessageEvent], Any]
-            The callback function to be called when a file is modified.
+        publish : PublisherCallback
+            publish a new event to parent
         filter_duplicated_content : bool, optional
             Whether to filter out events with duplicated content (default is True).
         """
-        super().__init__()
+        PublisherSubscriber.__init__(self)  # instead of super()
+        FileSystemEventHandler.__init__(self)  # instead of super()
+        self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self.filename: str = filename
         self.loop: asyncio.AbstractEventLoop = loop
-        self.callback: Callable[[MessageEvent], Any] = callback
         self.filter_duplicated_content = filter_duplicated_content
         self.last_content: Optional[str] = None
         self.user = str(os.getenv("USER"))
@@ -47,7 +49,7 @@ class Watcher(FileSystemEventHandler):
         Call when a file is modified.
 
         If filtering is enabled, it checks for content changes before
-        triggering the callback.
+        triggering the event publish.
 
         Parameters
         ----------
@@ -55,7 +57,6 @@ class Watcher(FileSystemEventHandler):
             The event object representing the file modification.
         """
         if event.src_path.endswith(self.filename):
-            # Read the contents of the file
             with open(event.src_path, "r") as file:
                 current_content = file.read()
 
@@ -63,13 +64,10 @@ class Watcher(FileSystemEventHandler):
             if not self.filter_duplicated_content or (
                 self.last_content != current_content
             ):
-                self.last_content = current_content  # Update the last content
-                # Create a dictionary to hold the event data
+                self.last_content = current_content
                 event_data = MessageEvent("human_message", self.user, current_content)
-                # Ensure callback is a coroutine function and schedule it to be run
-                coroutine = self.callback(event_data)  # This should now be a coroutine
+                coroutine = self.publish(["print", "record"], event_data)
                 asyncio.run_coroutine_threadsafe(coroutine, self.loop)
-            # If the content is the same and filtering is enabled, do nothing
 
     def start_watching(self) -> Observer:  # type: ignore
         """

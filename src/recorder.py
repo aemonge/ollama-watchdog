@@ -5,16 +5,17 @@ from typing import cast
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 
 from src.models.message_event import MessageEvent
-from src.models.subscriber import Subscriber
+from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
-class Recorder(Subscriber):
+class Recorder(PublisherSubscriber):
     """Class to record the conversations."""
 
     def __init__(
         self,
         session_id: str,
         connection_string: str,
+        publish: PublisherCallback,
     ) -> None:
         """
         Initialize the Recorder.
@@ -25,7 +26,10 @@ class Recorder(Subscriber):
             The session ID for the chat.
         connection_string : str
             The connection string for the SQLite database.
+        publish : PublisherCallback
+            publish a new event to parent
         """
+        self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self.history = SQLChatMessageHistory(
             session_id=session_id, connection_string=connection_string
         )
@@ -41,3 +45,6 @@ class Recorder(Subscriber):
         """
         if event.event_type == "human_message":
             self.history.add_user_message(cast(str, event.contents))
+            await self.publish(["chain"], MessageEvent("system_message"))
+        elif event.event_type == "ai_message":
+            self.history.add_ai_message(cast(str, event.contents))
