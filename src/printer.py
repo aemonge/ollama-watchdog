@@ -77,16 +77,6 @@ class Printer(PublisherSubscriber):
             return
 
         print("\r" + " " * (self.console.width - 1), end="\r")  # noqa: T201
-        if self.is_author_comment():
-            pattern = r"\*\*(?P<user>.+?)\*\* \((?P<date>.+?)\)"
-            if match := re.search(pattern, self._buffer):
-                user = Text(match["user"], style="bold")
-                date = Text(match["date"], style="italic")
-                title = user + Text(" (") + date + Text(")")
-                self.console.rule(title=title)
-            self._buffer = ""
-            return
-
         md = Markdown(self._buffer, code_theme="native", justify="left")
         self.console.print(md)
         self._buffer = ""
@@ -127,20 +117,7 @@ class Printer(PublisherSubscriber):
 
         return False
 
-    def is_author_comment(self) -> bool:
-        """
-        Check if the current buffer is our author comment rule.
-
-        Returns
-        -------
-        : bool
-            If it IS a multi-line block.
-        """
-        pattern = r'\n{0,1}\[comment\]: # "--- (.*)'
-        is_line = re.compile(pattern, re.MULTILINE | re.DOTALL)
-        return bool(is_line.search(self._buffer))
-
-    def title(self, event: MessageEvent) -> str:
+    def title(self, event: MessageEvent) -> None:
         """
         Print the title, prettier.
 
@@ -148,15 +125,14 @@ class Printer(PublisherSubscriber):
         ----------
         event : MessageEvent
             The message from where to extract the author and date.
-
-        Returns
-        -------
-        : str
-            A pretty title
         """
-        title = '[comment]: # "--- (**{author}** ({date}))"'
-        date = event.created_at.strftime("%a, %d %b %H:%M - %Y")
-        return title.format(author=event.author, date=date) + "\n"
+        if event.author is None or event.created_at is None:
+            return
+
+        user = Text(event.author, style="bold")
+        date = Text(event.created_at.strftime("%a, %d %b %H:%M - %Y"), style="italic")
+        title = user + Text(" (") + date + Text(")")
+        self.console.rule(title=title)
 
     async def pretty_print(
         self, text: str | AsyncIterator[BaseMessageChunk], author: str
@@ -182,8 +158,8 @@ class Printer(PublisherSubscriber):
             raise ValueError("Console width is too small.")
 
         if isinstance(text, str):
-            md = Markdown(text, code_theme="native", justify="left")
-            self.console.print(md)
+            for char in text:
+                self._print_char(char, column)
         elif isinstance(text, AsyncIterator):
             full_text = ""
             async for chunk in text:
@@ -234,7 +210,5 @@ class Printer(PublisherSubscriber):
         if event.contents is None or event.author is None:
             return
 
-        if event.author:
-            await self.pretty_print(self.title(event), event.author)
-
+        self.title(event)
         await self.pretty_print(event.contents, event.author)
