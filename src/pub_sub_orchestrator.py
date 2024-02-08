@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from src.chatter import Chatter
-from src.models.literals_types_constants import TopicsLiteral
+from src.models.literals_types_constants import EventsErrorTypes, TopicsLiteral
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherSubscriber
 from src.printer import Printer
@@ -19,7 +19,9 @@ from src.watcher import Watcher
 class PubSubOrchestrator:
     """Manages subscribers and publishes messages."""
 
-    def __init__(self, prompt_file: str, model: str) -> None:
+    def __init__(
+        self, prompt_file: str, model: str, debug_level: EventsErrorTypes
+    ) -> None:
         """
         Initialize the PubSubOrchestrator.
 
@@ -29,17 +31,27 @@ class PubSubOrchestrator:
             The file to watch.
         model : str
             The LLM model to use.
+        debug_level : EventsErrorTypes
+            The debug level to use.
         """
         self.filename = prompt_file
         self.user = str(os.getenv("USER"))
 
-        self.chatter = Chatter(model, self.publish)
-        self.prompt_processor = PromptProcessor(self.user, self.publish)
-        self.printer = Printer(self.publish)
-        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
-        self.summarizer = Summarizer(model, self.publish)
+        self.chatter = Chatter(model, self.publish, debug_level=debug_level)
+        self.prompt_processor = PromptProcessor(
+            self.user, self.publish, debug_level=debug_level
+        )
+        self.printer = Printer(self.publish, debug_level=debug_level)
+        self.recorder = Recorder(
+            str(uuid4()), "sqlite:///sqlite.db", self.publish, debug_level=debug_level
+        )
+        self.summarizer = Summarizer(model, self.publish, debug_level=debug_level)
         self.watcher = Watcher(
-            self.filename, self.user, asyncio.get_event_loop(), self.publish
+            self.filename,
+            self.user,
+            asyncio.get_event_loop(),
+            self.publish,
+            debug_level=debug_level,
         )
 
         self.processed_events: set = set()  # Set to store processed event timestamps

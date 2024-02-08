@@ -19,7 +19,7 @@ PublisherCallback = Callable[
 class PublisherSubscriber:
     """Subscriber abstract class."""
 
-    def __init__(self, debug_level: EventsErrorTypes = "debug") -> None:
+    def __init__(self, debug_level: EventsErrorTypes = "error") -> None:
         """
         Initialize the pub/sub parent class.
 
@@ -28,7 +28,6 @@ class PublisherSubscriber:
         debug_level : EventsErrorTypes
             (warning) The type of message to log.
         """
-        self._blocked_prompt = False
         self.debug_level = debug_level
 
     async def block(self, show_spinner: bool = False) -> None:
@@ -41,7 +40,7 @@ class PublisherSubscriber:
             (False) Show a spinner while waiting for new messages.
         """
         self._blocked_prompt = True
-        await self.log("Blocking new messages")
+        await self.log('"Blocking" new messages')
 
     async def unblock(self) -> None:
         """Allow for new messages."""
@@ -73,25 +72,13 @@ class PublisherSubscriber:
         message_type : EventsErrorTypes
             The type of message to log.
         """
-        print(DEBUG_LEVELS[message_type])
-        _msg = f"DEBUG_LEVELS[message_type]: {DEBUG_LEVELS[message_type]}"
-        _msg += "<= DEBUG_LEVELS[cast(EventsErrorTypes, self.debug_level)]: "
-        _msg += str(DEBUG_LEVELS[cast(EventsErrorTypes, self.debug_level)])
-
-        await self.publish(
-            ["print"], MessageEvent("system_message", "system", _msg, "warning")
-        )
-
-        # if (
-        #     DEBUG_LEVELS[message_type]
-        #     <= DEBUG_LEVELS[cast(EventsErrorTypes, self.debug_level)]
-        # ):
-        #     await self.publish(
-        #         ["print"], MessageEvent("system_message", "system", msg, message_type)
-        #     )
-        await self.publish(
-            ["print"], MessageEvent("system_message", "system", msg, message_type)
-        )
+        if (
+            DEBUG_LEVELS[message_type]
+            <= DEBUG_LEVELS[cast(EventsErrorTypes, self.debug_level)]
+        ):
+            await self.publish(
+                ["print"], MessageEvent("system_message", "system", msg, message_type)
+            )
 
     @abstractmethod
     def listen(

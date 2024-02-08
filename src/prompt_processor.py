@@ -7,6 +7,7 @@ from src.libs.file_include import replace_include_tags
 from src.libs.http_include import get_website_content
 from src.libs.remove_comments import remove_comments
 from src.libs.web_search import search_online
+from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -14,7 +15,12 @@ from src.models.publish_subscribe_class import PublisherCallback, PublisherSubsc
 class PromptProcessor(PublisherSubscriber):
     """The prompt processor interface."""
 
-    def __init__(self, author: str, publish: PublisherCallback) -> None:
+    def __init__(
+        self,
+        author: str,
+        publish: PublisherCallback,
+        debug_level: EventsErrorTypes = "warning",
+    ) -> None:
         """
         Construct the prompt processor.
 
@@ -24,7 +30,10 @@ class PromptProcessor(PublisherSubscriber):
             The user name, as author.
         publish : PublisherCallback
             publish a new event to parent
+        debug_level : EventsErrorTypes
+            The debug level to use.
         """
+        super().__init__(debug_level=debug_level)
         self.author = author
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 

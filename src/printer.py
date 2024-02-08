@@ -17,7 +17,7 @@ Todo
 [ ] Fix issue with block code with no language.
 """
 import re
-from typing import AsyncIterator, List, cast
+from typing import AsyncIterator, cast
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -26,6 +26,7 @@ from rich.text import Text
 from src.models.literals_types_constants import (
     LOG_LINE_BG,
     LOG_STYLES,
+    EventsErrorTypes,
     MessageContentType,
 )
 from src.models.message_event import MessageEvent
@@ -35,7 +36,9 @@ from src.models.publish_subscribe_class import PublisherCallback, PublisherSubsc
 class Printer(PublisherSubscriber):
     """Print with beautiful markdown."""
 
-    def __init__(self, publish: PublisherCallback) -> None:
+    def __init__(
+        self, publish: PublisherCallback, debug_level: EventsErrorTypes = "warning"
+    ) -> None:
         """
         Construct a new Printer.
 
@@ -43,7 +46,10 @@ class Printer(PublisherSubscriber):
         ----------
         publish : PublisherCallback
             publish a new event to parent
+        debug_level : EventsErrorTypes
+            The debug level to use.
         """
+        super().__init__(debug_level=debug_level)
         self.console = Console()
         self._buffer = ""
         self._spinId = 0

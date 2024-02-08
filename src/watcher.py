@@ -6,6 +6,7 @@ from typing import Optional
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -20,6 +21,7 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         loop: asyncio.AbstractEventLoop,
         publish: PublisherCallback,
         filter_duplicated_content: Optional[bool] = True,
+        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Initialize the Watcher.
@@ -36,7 +38,10 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
             publish a new event to parent
         filter_duplicated_content : bool, optional
             Whether to filter out events with duplicated content (default is True).
+        debug_level : EventsErrorTypes
+            The debug level to use.
         """
+        super().__init__(debug_level=debug_level)
         PublisherSubscriber.__init__(self)  # instead of super()
         FileSystemEventHandler.__init__(self)  # instead of super()
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]

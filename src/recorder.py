@@ -5,7 +5,7 @@ from typing import Dict, cast
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
-from src.models.literals_types_constants import DatabasePrefixes
+from src.models.literals_types_constants import DatabasePrefixes, EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -18,6 +18,7 @@ class Recorder(PublisherSubscriber):
         session_id: str,
         connection_string: str,
         publish: PublisherCallback,
+        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Initialize the Recorder.
@@ -30,7 +31,10 @@ class Recorder(PublisherSubscriber):
             The connection string for the SQLite database.
         publish : PublisherCallback
             publish a new event to parent
+        debug_level : EventsErrorTypes
+            The debug level to use.
         """
+        super().__init__(debug_level=debug_level)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self.history: Dict[DatabasePrefixes, SQLChatMessageHistory] = {
             "unprocessed": SQLChatMessageHistory(

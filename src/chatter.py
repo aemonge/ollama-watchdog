@@ -4,6 +4,7 @@
 from langchain_community.chat_models import ChatOllama
 from langchain_core.messages.base import BaseMessage
 
+from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -11,7 +12,12 @@ from src.models.publish_subscribe_class import PublisherCallback, PublisherSubsc
 class Chatter(PublisherSubscriber):
     """The main chat interface."""
 
-    def __init__(self, model: str, publish: PublisherCallback) -> None:
+    def __init__(
+        self,
+        model: str,
+        publish: PublisherCallback,
+        debug_level: EventsErrorTypes = "warning",
+    ) -> None:
         """
         Construct the LLM chat with SQLite.
 
@@ -21,7 +27,10 @@ class Chatter(PublisherSubscriber):
             The model to use for the LLM.
         publish : PublisherCallback
             publish a new event to parent
+        debug_level : EventsErrorTypes
+            The debug level to use.
         """
+        super().__init__(debug_level=debug_level)
         self.model = model
         self.llm = ChatOllama(model=model)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]

@@ -7,6 +7,7 @@ import asyncio
 import click
 from twisted.internet import asyncioreactor
 
+from src.models.literals_types_constants import EventsErrorTypes
 from src.pub_sub_orchestrator import PubSubOrchestrator
 
 asyncioreactor.install(asyncio.get_event_loop())
@@ -17,7 +18,8 @@ from twisted.internet import reactor  # noqa: E402
 @click.command()
 @click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
 @click.option("--model", default="codebooga:34b-v0.1-q5_0", help="Model to use.")
-def run(prompt_file: str, model: str) -> None:
+@click.option("--error-level", default="warning", help="choose a debug level")
+def run(prompt_file: str, model: str, error_level: EventsErrorTypes) -> None:
     """
     Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
 
@@ -58,10 +60,11 @@ def run(prompt_file: str, model: str) -> None:
         The file to watch for prompts.
     model : str
         The model to use.
+    error_level : EventsErrorTypes
+        The debug level to use.
     """
     orchestrator = PubSubOrchestrator(
-        prompt_file=prompt_file,
-        model=model,
+        prompt_file=prompt_file, model=model, debug_level=error_level
     )
 
     asyncio.ensure_future(orchestrator.start())
