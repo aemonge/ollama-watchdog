@@ -11,17 +11,23 @@ printed directly.
 
 Todo
 ----
+[ ] Use the rich spinner...
+    https://rich.readthedocs.io/en/latest/reference/spinner.html?highlight=style
 [ ] Stop the buffer on <EOF> or <EOB> block end signals
 [ ] Fix issue with block code with no language.
 """
 import re
-from typing import AsyncIterator
+from typing import AsyncIterator, List, cast
 
-from langchain_core.messages.base import BaseMessageChunk
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
 
+from src.models.literals_types_constants import (
+    LOG_LINE_BG,
+    LOG_STYLES,
+    MessageContentType,
+)
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -119,6 +125,28 @@ class Printer(PublisherSubscriber):
 
         return False
 
+    def system_message(self, event: MessageEvent) -> None:
+        """
+        Print a system_message.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The message from where to extract the author and date.
+        """
+        msgs = event.contents if isinstance(event.contents, list) else [event.contents]
+
+        for msg in msgs:
+            if (_msg := cast(str, msg).strip()) and _msg:
+                style = (
+                    LOG_STYLES[event.system_type]
+                    if event.system_type in LOG_STYLES
+                    else ""
+                )
+                self.console.rule(
+                    title=Text(_msg, style), align="right", style=LOG_LINE_BG
+                )
+
     def title(self, event: MessageEvent) -> None:
         """
         Print the title, prettier.
@@ -136,15 +164,13 @@ class Printer(PublisherSubscriber):
         title = user + Text(" (") + date + Text(")")
         self.console.rule(title=title)
 
-    async def pretty_print(
-        self, text: str | AsyncIterator[BaseMessageChunk], author: str
-    ) -> None:
+    async def pretty_print(self, text: MessageContentType, author: str) -> None:
         """
         Process the text.
 
         Parameters
         ----------
-        text : str
+        text : MessageContentType
             The text to process
         author : str
             The author of the event to publish
@@ -163,13 +189,17 @@ class Printer(PublisherSubscriber):
             for char in text:
                 self._print_char(char)
         elif isinstance(text, AsyncIterator):
+            full_text = ""
             async for chunk in text:
                 for char in chunk.content:
                     if isinstance(char, str):
                         self._print_char(char)
+                        full_text += char
             self._print_char("\n")
+            full_text += "\n"
 
-            event_data = MessageEvent("ai_message", author, self._buffer)
+            event_data = MessageEvent("ai_message", author, full_text)
+            await self.log('Sending a "record" event')
             await self.publish(["record"], event_data)
 
     def _print_char(self, char: str) -> None:
@@ -196,7 +226,7 @@ class Printer(PublisherSubscriber):
 
         self._buffer += char
 
-    async def process_event(self, event: MessageEvent) -> None:
+    async def listen(self, event: MessageEvent) -> None:
         """
         Procese the event and returns the processed event.
 
@@ -208,5 +238,8 @@ class Printer(PublisherSubscriber):
         if event.contents is None or event.author is None:
             return
 
-        self.title(event)
-        await self.pretty_print(event.contents, event.author)
+        if event.event_type == "system_message":
+            self.system_message(event)
+        else:
+            self.title(event)
+            await self.pretty_print(event.contents, event.author)

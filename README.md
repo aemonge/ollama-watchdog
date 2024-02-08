@@ -87,13 +87,27 @@ To use `ollama-watchdog`, follow these steps:
         configuration.
 -   [ ] On the markdown tail, fix the \`\`\` single with no language marks view
 -   [ ] Allow control with special syntax to change the LLM parameters, and SQLite
-        session. > The idea would be to have a system bot, that can change the main
-        threads > conversations, drop in and out some actors. Like an director, that
-        directs > acts (threads) with actors (ai bots). All with the same chat-like >
-        instructions. > Start simple: > 1. list conversations (sessions) > 2. set /
-        switch to session `a` > 3. delete session > 4. set (incognito) ephimeral session
-        (by default?) > 5. change the model
+        session. The idea would be to have a system bot, that can change the main
+        threads conversations, drop in and out some actors. Like an director, that
+        directs acts (threads) with actors (ai bots). All with the same chat-like
+        instructions. Start simple:
+
+            1. list conversations (sessions)
+            2. set /switch to session `a`
+            3. delete session
+            4. set (incognito) ephimeral session (by default?)
+            5. change the model
 
 -   [ ] (printer) Stop the buffer on <EOF> or <EOB> block end signals
 -   [ ] (printer) Fix issue with block code with no language.
--   [ ] Detect and avoid the infinite loop.
+-   [x] Detect and avoid the infinite loop.
+-   [ ] Implement a simple "working" event that prints a loading spinner in the middle
+-   [ ] Use diffrenet models, for diffrenet tasks. Staring by the summarization
+-   [ ] Move all event triggers and listeners to the orchestrator, to centralize the
+        communication and provide a way to log messages pathways.
+
+# Notes to organize
+
+-   I've chosen to summarize the messages, when the AI model responds. Since there's
+    more delay when the user is thinking on the next question, rather than when to AI
+    would be processing.

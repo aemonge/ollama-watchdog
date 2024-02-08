@@ -1,19 +1,24 @@
-"""Here we will define the LLM conversation."""
+"""The class that will store and summarize the history of conversations."""
 
+from typing import cast
 
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages.base import BaseMessage
+from langchain_core.messages import BaseMessage
 
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
-class Chatter(PublisherSubscriber):
-    """The main chat interface."""
+class Summarizer(PublisherSubscriber):
+    """The class that will store and summarize the history of conversations."""
 
-    def __init__(self, model: str, publish: PublisherCallback) -> None:
+    def __init__(
+        self,
+        model: str,
+        publish: PublisherCallback,
+    ) -> None:
         """
-        Construct the LLM chat with SQLite.
+        Summarize with an LLM.
 
         Parameters
         ----------
@@ -43,14 +48,19 @@ class Chatter(PublisherSubscriber):
             await self.log(msg, "error")
             return
 
-        await self.log(f'Chatting with "{self.model}"')
-        await self.log(event.contents, "debug")
-        await self.log('Streaming the "print" event')
+        await self.log("Summarizing")
+        summarization_text = (
+            "Distill the above chat messages into a single summary message.\n"
+            "Include as many specific details as you can, and avoid adding details.\n"
+            # "Note that the summary is incremental, so avoid removing key concepts."
+            "Messages:\n\n" + "\n".join([str(message) for message in event.contents])
+        )
+
+        await self.log(summarization_text.split("\n"), "debug")
+        summary = self.llm.invoke(summarization_text)
+
+        await self.log('Sending a "record" event')
         await self.publish(
-            ["print"],
-            MessageEvent(
-                "ai_message",
-                self.model,
-                self.llm.astream(event.contents),
-            ),
+            ["record"],
+            MessageEvent("chat_summary", self.model, cast(str, summary.content)),
         )

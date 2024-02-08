@@ -1,14 +1,18 @@
 """Manages subscribers and publishes messages."""
 
 import asyncio
+import os
 from typing import Dict, List, Optional
 from uuid import uuid4
 
 from src.chatter import Chatter
-from src.models.message_event import MessageEvent, TopicsLiteral
+from src.models.literals_types_constants import TopicsLiteral
+from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherSubscriber
 from src.printer import Printer
+from src.prompt_processor import PromptProcessor
 from src.recorder import Recorder
+from src.summarizer import Summarizer
 from src.watcher import Watcher
 
 
@@ -27,23 +31,28 @@ class PubSubOrchestrator:
             The LLM model to use.
         """
         self.filename = prompt_file
+        self.user = str(os.getenv("USER"))
 
-        self.processed_events: set = set()  # Set to store processed event timestamps
-        self.subscribers: Dict[TopicsLiteral, list] = {
-            "print": [],
-            "record": [],
-            "chain": [],
-        }
+        self.chatter = Chatter(model, self.publish)
+        self.prompt_processor = PromptProcessor(self.user, self.publish)
         self.printer = Printer(self.publish)
         self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
-        self.chatter = Chatter(model, self.publish, self.recorder.history)
+        self.summarizer = Summarizer(model, self.publish)
+        self.watcher = Watcher(
+            self.filename, self.user, asyncio.get_event_loop(), self.publish
+        )
 
-        self.add_subscriber("print", self.printer)
-        self.add_subscriber("record", self.recorder)
-        self.add_subscriber("chain", self.chatter)
+        self.processed_events: set = set()  # Set to store processed event timestamps
+        self.listeners: Dict[TopicsLiteral, list] = {
+            "ask": [self.chatter],
+            "chain": [self.prompt_processor],
+            "print": [self.printer],
+            "record": [self.recorder],
+            "summarize": [self.summarizer],
+        }
 
-    def add_subscriber(
-        self, topic: TopicsLiteral, subscriber: PublisherSubscriber
+    def listen(
+        self, topic: TopicsLiteral, subscribers: List[PublisherSubscriber]
     ) -> None:
         """
         Add a subscriber to the orchestrator.
@@ -52,25 +61,11 @@ class PubSubOrchestrator:
         ----------
         topic: TopicsLiteral
             The topic to subscriber the event from.
-        subscriber : PublisherSubscriber
-            The subscriber to add.
+        subscribers : List[PublisherSubscriber]
+            The subscribers to add.
         """
-        self.subscribers[topic].append(subscriber)
-
-    def remove_subscriber(
-        self, topic: TopicsLiteral, subscriber: PublisherSubscriber
-    ) -> None:
-        """
-        Remove the subscriber from the orchestrator.
-
-        Parameters
-        ----------
-        topic: TopicsLiteral
-            The topic to subscriber the event from.
-        subscriber : PublisherSubscriber
-            The subscriber to remove.
-        """
-        self.subscribers[topic].remove(subscriber)
+        for subscriber in subscribers:
+            self.listeners[topic].append(subscriber)
 
     async def publish(
         self, topics: List[TopicsLiteral], event: MessageEvent  # noqa: U100
@@ -88,14 +83,12 @@ class PubSubOrchestrator:
         for topic in topics:
             event_id = f"{topic}-{event.created_at.timestamp()}"
             if event_id not in self.processed_events:
-                for subscriber in self.subscribers[topic]:
-                    await subscriber.process_event(event)
+                for subscriber in self.listeners[topic]:
+                    await subscriber.listen(event)
                 self.processed_events.add(event_id)  # Mark event as processed
 
     async def start(self) -> None:
         """Asynchronously runs the main program."""
-        loop = asyncio.get_event_loop()
-        self.watcher = Watcher(self.filename, loop, self.publish)
         observer = self.watcher.start_watching()
 
         try:

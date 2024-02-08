@@ -1,7 +1,6 @@
 """Monitors file changes and publishes an event."""
 
 import asyncio
-import os
 from typing import Optional
 
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
@@ -17,6 +16,7 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
     def __init__(
         self,
         filename: str,
+        author: str,
         loop: asyncio.AbstractEventLoop,
         publish: PublisherCallback,
         filter_duplicated_content: Optional[bool] = True,
@@ -28,6 +28,8 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         ----------
         filename : str
             The name of the file to watch.
+        author : str
+            The name of the user asking the question to the file.
         loop : asyncio.AbstractEventLoop
             The event loop to run asynchronous tasks.
         publish : PublisherCallback
@@ -42,7 +44,30 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         self.loop: asyncio.AbstractEventLoop = loop
         self.filter_duplicated_content = filter_duplicated_content
         self.last_content: Optional[str] = None
-        self.user = str(os.getenv("USER"))
+        self.user = author
+
+    def _on_modified(self, current_content: str) -> None:
+        """
+        Privately call when a file is modified.
+
+        Parameters
+        ----------
+        current_content : str
+            The content of the file.
+        """
+        self.last_content = current_content
+        event_data = MessageEvent("human_raw_message", self.user, current_content)
+        asyncio.run_coroutine_threadsafe(
+            self.log(f'Changes detected on "{self.filename}"'),
+            self.loop,
+        )
+        asyncio.run_coroutine_threadsafe(
+            self.log('Sending "record" event'),
+            self.loop,
+        )
+        coroutine = self.publish(["record"], event_data)
+        asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+        asyncio.run_coroutine_threadsafe(self.block(), self.loop)
 
     def on_modified(self, event: FileModifiedEvent) -> None:
         """
@@ -56,18 +81,17 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         event : FileModifiedEvent
             The event object representing the file modification.
         """
-        if event.src_path.endswith(self.filename):
-            with open(event.src_path, "r") as file:
-                current_content = file.read()
+        if not event.src_path.endswith(self.filename):
+            return
+        with open(event.src_path, "r") as file:
+            current_content = file.read()
 
-            # Check if filtering is enabled and if the content has changed
-            if not self.filter_duplicated_content or (
-                self.last_content != current_content
-            ):
-                self.last_content = current_content
-                event_data = MessageEvent("human_message", self.user, current_content)
-                coroutine = self.publish(["print", "record"], event_data)
-                asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+        if (
+            not self.filter_duplicated_content
+            or (self.last_content != current_content)
+            # ) and not self.blocked_prompt:
+        ):
+            self._on_modified(current_content)
 
     def start_watching(self) -> Observer:  # type: ignore
         """

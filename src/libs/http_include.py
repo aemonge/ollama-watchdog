@@ -4,7 +4,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
-from src.constants import TIMEOUT
+from src.models.literals_types_constants import TIMEOUT
 
 
 def get_website_content(content: str) -> str:
