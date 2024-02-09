@@ -1,13 +1,13 @@
 """The class that will store and summarize the history of conversations."""
 
-import asyncio
-from typing import AsyncIterator, List, cast
+from typing import List, Union, cast
 
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages.ai import AIMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.messages.base import BaseMessageChunk
 
-from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -46,6 +46,32 @@ class Summarizer(PublisherSubscriber):
         mock_summary = "This is a mock summary."
         return BaseMessageChunk(type="ai", content=mock_summary)
 
+    def _convert_base_message(
+        self, messages: List[BaseMessage]
+    ) -> List[Union[HumanMessage, AIMessage]]:
+        """
+        Convert the BaseMessage to the correct type.
+
+        @deprecated: As soon as there a fix for the typing issue.
+
+        Parameters
+        ----------
+        messages : List[BaseMessage]
+            The list of BaseMessage to convert.
+
+        Returns
+        -------
+        : List[Union[HumanMessage, AIMessage]]
+            The list of HumanMessage or AIMessage objects.
+        """
+        _messages = []
+        for message in messages:
+            if message.type == "human":
+                _messages.append(HumanMessage(content=message.content))
+            elif message.type == "ai":
+                _messages.append(AIMessage(content=message.content))
+        return _messages
+
     async def listen(self, event: MessageEvent) -> None:
         """
         Procese the event and returns the processed event.
@@ -69,8 +95,7 @@ class Summarizer(PublisherSubscriber):
         summarization_instructions = (
             "Distill the above chat messages into a single summary message.\n"
             "Include as many specific details as you can, and avoid adding details.\n"
-            # "Note that the summary is incremental, so avoid removing key concepts."
-            # "Messages:\n\n" + "\n".join([str(message) for message in event.contents])
+            "Note that the summary is incremental, so avoid removing key concepts."
         )
         summarization_prompt = cast(List[BaseMessage], event.contents)
         summarization_prompt.append(
@@ -81,7 +106,9 @@ class Summarizer(PublisherSubscriber):
         if self.model == "mock":
             summary = self._mock_invoke()
         else:
-            summary = self.llm.invoke(summarization_prompt)
+            summary = self.llm.invoke(
+                self._convert_base_message(cast(List[BaseMessage], event.contents))
+            )
 
         await self.log('Sending a "record" event')
         await self.publish(

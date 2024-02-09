@@ -6,8 +6,8 @@ from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages.base import BaseMessage
 
 from src.models.literals_types_constants import (
+    SUMMARIZE_EVERY,
     DatabasePrefixes,
-    EventsErrorTypes,
     MessageContentType,
 )
 from src.models.message_event import MessageEvent
@@ -44,11 +44,7 @@ class Recorder(PublisherSubscriber):
             "processed": SQLChatMessageHistory(
                 session_id=f"processed-{session_id}",
                 connection_string=connection_string,
-            ),
-            "summarized": SQLChatMessageHistory(
-                session_id=f"summarized-{session_id}",
-                connection_string=connection_string,
-            ),
+            )
         }
 
     def _normalize_base_message(
@@ -87,9 +83,12 @@ class Recorder(PublisherSubscriber):
         self.history["processed"].add_message(msg)
         self.history["unprocessed"].add_message(msg)
 
+        if len(self.history["processed"].messages) % SUMMARIZE_EVERY != 0:
+            await self.block(False)
+            return
+
         contents: MessageContentType = [self._last_human_processed_message, msg]
-        if self.history["summarized"].messages:
-            contents += self.history["summarized"].messages[-1:]
+        contents += self.history["processed"].messages[-SUMMARIZE_EVERY:]
 
         await self.log('Sending a "summarize" event')
         await self.publish(["summarize"], MessageEvent(
@@ -112,9 +111,8 @@ class Recorder(PublisherSubscriber):
         self._last_human_processed_message = msg
         self.history["processed"].add_message(msg)
 
-        contents: MessageContentType = [msg]
-        if self.history["summarized"].messages:
-            contents += self.history["summarized"].messages[-1:]
+        contents: MessageContentType
+        contents = self.history["processed"].messages[-SUMMARIZE_EVERY:]
 
         await self.log('Sending "ask" event')
         await self.publish(["ask"], MessageEvent(
@@ -147,16 +145,13 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the message.
         """
-        self.history["summarized"].add_message(cast(BaseMessage, event.contents))
-        self.block = False
+        msg = self._normalize_base_message(event, "ai")
+        self.history["processed"].add_message(msg)
+        await self.block(False)
 
     async def listen(self, event: MessageEvent) -> None:
         """
         Process the incoming event, specifically looking for chunked responses to store.
-
-        Todo
-        ----
-        - Use last_message from `SQLChatMessageHistory`, when available.
 
         Parameters
         ----------
@@ -171,7 +166,7 @@ class Recorder(PublisherSubscriber):
                 ),
                 "error",
             )
-        await self.log(str(event.contents), "debug")
+        await self.log(cast(MessageContentType, event.contents), "debug")
 
         match event.event_type:
             case "ai_message":

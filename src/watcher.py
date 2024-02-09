@@ -61,6 +61,10 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
             self.loop,
         )
         asyncio.run_coroutine_threadsafe(
+            self.block(True),
+            self.loop,
+        )
+        asyncio.run_coroutine_threadsafe(
             self.log('Sending "record" event'),
             self.loop,
         )
@@ -87,9 +91,8 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         if (
             not self.filter_duplicated_content
             or (self.last_content != current_content)
-            and not self.block
+            and not self.is_blocked()
         ):
-            self.block = True
             self._on_modified(current_content)
 
     def start_watching(self) -> Observer:  # type: ignore

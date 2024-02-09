@@ -19,8 +19,7 @@ PublisherCallback = Callable[
 class PublisherSubscriber:
     """Subscriber abstract class."""
 
-    @property
-    def block(self) -> bool:
+    def is_blocked(self) -> bool:
         """
         Get the value of the block property.
 
@@ -29,9 +28,8 @@ class PublisherSubscriber:
         : bool
             The block value
         """
-        return Logger.get_instance().block
+        return Logger.get_instance().is_blocked()
 
-    @block.setter
     async def block(self, value: bool) -> None:
         """
         Set the value of the block property.
@@ -41,7 +39,7 @@ class PublisherSubscriber:
         value : bool
             The value to set.
         """
-        Logger.get_instance().block = value
+        await Logger.get_instance().block(value)
 
     async def log(
         self, msg: MessageContentType, message_type: EventsErrorTypes = "trace"

@@ -68,7 +68,7 @@ To use `ollama-watchdog`, follow these steps:
 -   [x] Apply chunks responses to the Ollama.
 -   [x] Add support for any endpoint like, perplexity.
 -   [ ] Ability to include all types of files, like images.
--   [ ] On error, display a message from `system` that tells us the error. Make sure
+-   [-] On error, display a message from `system` that tells us the error. Make sure
         https connection errors are being parsed and sent.
 -   [-] Omit commented string to prompt `<!-- -->`.
 -   [ ] keep the response linted in markdown, or at least in a max-line-length, so that
@@ -79,7 +79,7 @@ To use `ollama-watchdog`, follow these steps:
         markdown and render it. And quite the tail, and watch the file with watchdog to
         be less resource intensive
 -   [x] Use a database to store the conversations.
--   [ ] Block the input while the responses are being processed or at least queue it and
+-   [x] Block the input while the responses are being processed or at least queue it and
         trim duplicated.
 -   [x] Use memory for our LLM's https://chatdatabase.github.io/
 -   [ ] Allow multi string commands, specially useful for `ask`

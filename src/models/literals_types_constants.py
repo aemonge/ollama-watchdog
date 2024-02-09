@@ -62,6 +62,7 @@ DatabasePrefixes = Literal[
 CONSOLE_PADDING = 1
 RESPONSE_TIMEOUT = 10
 TIMEOUT = 3000
+SUMMARIZE_EVERY = 8
 
 LOG_STYLES: Dict[EventsErrorTypes, str] = {
     "critical": "red bold",

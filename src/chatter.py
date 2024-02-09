@@ -2,9 +2,11 @@
 
 
 import asyncio
-from typing import AsyncIterator
+from typing import AsyncIterator, List, Union, cast
 
 from langchain_community.chat_models import ChatOllama
+from langchain_core.messages import HumanMessage
+from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
 from src.models.message_event import MessageEvent
@@ -49,6 +51,32 @@ class Chatter(PublisherSubscriber):
         await asyncio.sleep(0.3)
         yield BaseMessageChunk(type="ai", content=".")
 
+    def _convert_base_message(
+        self, messages: List[BaseMessage]
+    ) -> List[Union[HumanMessage, AIMessage]]:
+        """
+        Convert the BaseMessage to the correct type.
+
+        @deprecated: As soon as there a fix for the typing issue.
+
+        Parameters
+        ----------
+        messages : List[BaseMessage]
+            The list of BaseMessage to convert.
+
+        Returns
+        -------
+        : List[Union[HumanMessage, AIMessage]]
+            The list of HumanMessage or AIMessage objects.
+        """
+        _messages = []
+        for message in messages:
+            if message.type == "human":
+                _messages.append(HumanMessage(content=message.content))
+            elif message.type == "ai":
+                _messages.append(AIMessage(content=message.content))
+        return _messages
+
     async def listen(self, event: MessageEvent) -> None:
         """
         Procese the event and returns the processed event.
@@ -59,7 +87,7 @@ class Chatter(PublisherSubscriber):
             The event to process.
         """
         if not isinstance(event.contents, list) or not isinstance(
-            event.contents[0], (str, BaseMessage)
+            event.contents[0], BaseMessage
         ):
             msg = f'Type "List[BaseMessage|str]" in {self.__class__.__name__} '
             msg += f"expected: {event.contents}"
@@ -70,7 +98,10 @@ class Chatter(PublisherSubscriber):
         if self.model == "mock":
             stream = self._mock_astream()
         else:
-            stream = self.llm.astream(event.contents)
+            await self.log(event.contents, "debug")
+            stream = self.llm.astream(
+                self._convert_base_message(cast(List[BaseMessage], event.contents))
+            )
 
         await self.log('Streaming the "print" event')
         await self.publish(

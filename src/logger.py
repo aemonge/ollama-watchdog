@@ -101,8 +101,7 @@ class Logger(object):
                 )
             )
 
-    @property
-    def block(self) -> bool:
+    def is_blocked(self) -> bool:
         """
         Get the value of the block property.
 
@@ -113,7 +112,6 @@ class Logger(object):
         """
         return self._block
 
-    @block.setter
     async def block(self, value: bool) -> None:
         """
         Set the value of the block property.
