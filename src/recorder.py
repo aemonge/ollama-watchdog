@@ -3,9 +3,13 @@
 from typing import Dict, cast
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages.base import BaseMessage
 
-from src.models.literals_types_constants import DatabasePrefixes, EventsErrorTypes
+from src.models.literals_types_constants import (
+    DatabasePrefixes,
+    EventsErrorTypes,
+    MessageContentType,
+)
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -51,6 +55,105 @@ class Recorder(PublisherSubscriber):
             ),
         }
 
+    def _normalize_base_message(
+        self, event: MessageEvent, msg_type: str = "human"
+    ) -> BaseMessage:
+        """
+        Normalize the message to a BaseMessage.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The event containing the message.
+        msg_type : str
+            The type of message. Defaults to "human".
+
+        Returns
+        -------
+        BaseMessage
+            The normalized message.
+        """
+        msg = event.contents
+        if not isinstance(msg, BaseMessage):
+            return BaseMessage(type=msg_type, content=str(msg))
+        return msg
+
+    async def _ai_message(self, event: MessageEvent) -> None:
+        """
+        Process the AI message.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The event containing the message.
+        """
+        msg = self._normalize_base_message(event, "ai")
+        self.history["processed"].add_message(msg)
+        self.history["unprocessed"].add_message(msg)
+
+        contents: MessageContentType = [self._last_human_processed_message, msg]
+        if self.history["summarized"].messages:
+            contents += self.history["summarized"].messages[-1:]
+
+        await self.log('Sending a "summarize" event')
+        await self.publish(["summarize"], MessageEvent(
+            "chat_summary",
+            event.author,
+            contents=contents
+        ))
+
+    async def _human_processed_message(self, event: MessageEvent) -> None:
+        """
+        Process the human processed message.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The event containing the message.
+        """
+        msg = self._normalize_base_message(event)
+
+        self._last_human_processed_message = msg
+        self.history["processed"].add_message(msg)
+
+        contents: MessageContentType = [msg]
+        if self.history["summarized"].messages:
+            contents += self.history["summarized"].messages[-1:]
+
+        await self.log('Sending "ask" event')
+        await self.publish(["ask"], MessageEvent(
+            "chat",
+            event.author,
+            contents=contents
+        ))
+
+    async def _human_raw_message(self, event: MessageEvent) -> None:
+        """
+        Process the human raw message.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The event containing the message.
+        """
+        msg = self._normalize_base_message(event)
+
+        self.history["unprocessed"].add_message(msg)
+        await self.log('Sending ["print, "chain"] events')
+        await self.publish(["print", "chain"], event)
+
+    async def _chat_summary(self, event: MessageEvent) -> None:
+        """
+        Process the chat summary.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The event containing the message.
+        """
+        self.history["summarized"].add_message(cast(BaseMessage, event.contents))
+        await self.unblock()
+
     async def listen(self, event: MessageEvent) -> None:
         """
         Process the incoming event, specifically looking for chunked responses to store.
@@ -76,51 +179,10 @@ class Recorder(PublisherSubscriber):
 
         match event.event_type:
             case "ai_message":
-                self.history["processed"].add_ai_message(
-                    cast(AIMessage, event.contents)
-                )
-                self.history["unprocessed"].add_ai_message(
-                    cast(AIMessage, event.contents)
-                )
-
-                contents = [
-                    self._last_human_processed_message,
-                    cast(BaseMessage, event.contents)
-                ]
-                if self.history["summarized"].messages:
-                    contents += [self.history["summarized"].messages[-1]]
-
-                await self.log('Sending a "summarize" event')
-                await self.publish(["summarize"], MessageEvent(
-                    "chat_summary",
-                    event.author,
-                    contents=contents
-                ))
-
+                await self._ai_message(event)
             case "chat_summary":
-                self.history["summarized"].add_ai_message(
-                    cast(AIMessage, event.contents)
-                )
-                await self.unblock()
-
+                await self._chat_summary(event)
             case "human_processed_message":
-                self._last_human_processed_message = event.contents
-                self.history["processed"].add_user_message(
-                    cast(HumanMessage, event.contents)
-                )
-                contents = [cast(BaseMessage, event.contents)]
-                if self.history["summarized"].messages:
-                    contents += [self.history["summarized"].messages[-1]]
-                await self.log('Sending "ask" event')
-                await self.publish(["ask"], MessageEvent(
-                    "chat_summary",
-                    event.author,
-                    contents=contents
-                ))
-
+                await self._human_processed_message(event)
             case "human_raw_message":
-                self.history["unprocessed"].add_user_message(
-                    cast(HumanMessage, event.contents)
-                )
-                await self.log('Sending ["print, "chain"] events')
-                await self.publish(["print", "chain"], event)
+                await self._human_raw_message(event)

@@ -37,7 +37,7 @@ class PubSubOrchestrator:
         self.filename = prompt_file
         self.user = str(os.getenv("USER"))
 
-        self.chatter = Chatter(model, self.publish, debug_level=debug_level)
+        self.chatter = Chatter(self.publish, model=model, debug_level=debug_level)
         self.prompt_processor = PromptProcessor(
             self.user, self.publish, debug_level=debug_level
         )
@@ -45,7 +45,7 @@ class PubSubOrchestrator:
         self.recorder = Recorder(
             str(uuid4()), "sqlite:///sqlite.db", self.publish, debug_level=debug_level
         )
-        self.summarizer = Summarizer(model, self.publish, debug_level=debug_level)
+        self.summarizer = Summarizer(self.publish, model=model, debug_level=debug_level)
         self.watcher = Watcher(
             self.filename,
             self.user,
@@ -104,6 +104,7 @@ class PubSubOrchestrator:
         observer = self.watcher.start_watching()
 
         try:
+            await self.watcher.log("Started Ollama Watch Dog")
             while True:
                 await asyncio.sleep(3600)
         finally:

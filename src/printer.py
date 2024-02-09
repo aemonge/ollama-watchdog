@@ -17,6 +17,7 @@ Todo
 [ ] Fix issue with block code with no language.
 """
 import re
+import textwrap
 from typing import AsyncIterator, cast
 
 from rich.console import Console
@@ -141,16 +142,22 @@ class Printer(PublisherSubscriber):
             The message from where to extract the author and date.
         """
         msgs = event.contents if isinstance(event.contents, list) else [event.contents]
-
         for msg in msgs:
-            if (_msg := cast(str, msg).strip()) and _msg:
-                style = (
-                    LOG_STYLES[event.system_type]
-                    if event.system_type in LOG_STYLES
-                    else ""
-                )
+            style = (
+                LOG_STYLES[event.system_type] if event.system_type in LOG_STYLES else ""
+            )
+            _msg = msg if isinstance(msg, str) else repr(msg)
+
+            # Split the message into parts that fit the console width
+            parts = [
+                _msg[i : i + self.console.width]
+                for i in range(0, len(_msg), self.console.width)
+            ]
+
+            # Display each part with its own console.rule
+            for part in parts:
                 self.console.rule(
-                    title=Text(_msg, style), align="right", style=LOG_LINE_BG
+                    title=Text(part, style), align="right", style=LOG_LINE_BG
                 )
 
     def title(self, event: MessageEvent) -> None:

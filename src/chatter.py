@@ -1,8 +1,11 @@
 """Here we will define the LLM conversation."""
 
 
+import asyncio
+from typing import AsyncIterator, cast
+
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages.base import BaseMessage
+from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
 from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
@@ -14,8 +17,8 @@ class Chatter(PublisherSubscriber):
 
     def __init__(
         self,
-        model: str,
         publish: PublisherCallback,
+        model: str = "mock",
         debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
@@ -35,6 +38,22 @@ class Chatter(PublisherSubscriber):
         self.llm = ChatOllama(model=model)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
+    async def _mock_astream(self) -> AsyncIterator[BaseMessageChunk]:
+        """
+        Mock of the `astream` method, with "hola mundo.".
+
+        Yields
+        ------
+        AsyncIterator[BaseMessageChunk]
+            An asynchronous iterator of BaseMessageChunk objects.
+        """
+        await asyncio.sleep(0.3)
+        yield BaseMessageChunk(type="ai", content="hola ")
+        await asyncio.sleep(0.3)
+        yield BaseMessageChunk(type="ai", content="mundo")
+        await asyncio.sleep(0.3)
+        yield BaseMessageChunk(type="ai", content=".")
+
     async def listen(self, event: MessageEvent) -> None:
         """
         Procese the event and returns the processed event.
@@ -53,13 +72,13 @@ class Chatter(PublisherSubscriber):
             return
 
         await self.log(f'Chatting with "{self.model}"')
-        await self.log(event.contents, "debug")
+        if self.model == "mock":
+            stream = self._mock_astream()
+        else:
+            stream = self.llm.astream(event.contents)
+
         await self.log('Streaming the "print" event')
         await self.publish(
             ["print"],
-            MessageEvent(
-                "ai_message",
-                self.model,
-                self.llm.astream(event.contents),
-            ),
+            MessageEvent("ai_message", self.model, contents=stream),
         )

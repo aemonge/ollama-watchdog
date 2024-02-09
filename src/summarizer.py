@@ -1,11 +1,13 @@
 """The class that will store and summarize the history of conversations."""
 
-from typing import cast
+import asyncio
+from typing import AsyncIterator, List, cast
 
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages import BaseMessage
-from src.models.literals_types_constants import EventsErrorTypes
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages.base import BaseMessageChunk
 
+from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -15,8 +17,8 @@ class Summarizer(PublisherSubscriber):
 
     def __init__(
         self,
-        model: str,
         publish: PublisherCallback,
+        model: str = "mock",
         debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
@@ -36,6 +38,18 @@ class Summarizer(PublisherSubscriber):
         self.llm = ChatOllama(model=model)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
+    def _mock_invoke(self) -> BaseMessageChunk:
+        """
+        Mock of the `invoke` method.
+
+        Returns
+        -------
+        : BaseMessageChunk
+            A mock response encapsulating the summary.
+        """
+        mock_summary = "This is a mock summary."
+        return BaseMessageChunk(type="ai", content=mock_summary)
+
     async def listen(self, event: MessageEvent) -> None:
         """
         Procese the event and returns the processed event.
@@ -45,24 +59,33 @@ class Summarizer(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
-        if not isinstance(event.contents, list) or not isinstance(
-            event.contents[0], (str, BaseMessage)
+        if (
+            not event.contents
+            or not isinstance(event.contents, list)
+            or not isinstance(event.contents[0], BaseMessage)
         ):
-            msg = f'Type "List[BaseMessage|str]" in {self.__class__.__name__} '
-            msg += f"expected: {event.contents}"
-            await self.log(msg, "error")
+            _msg = "Event contents isn't a 'List[BaseMessage]' "
+            _msg += f"in {self.__class__.__name__}"
+            await self.log(_msg, "error")
             return
 
         await self.log("Summarizing")
-        summarization_text = (
+        summarization_instructions = (
             "Distill the above chat messages into a single summary message.\n"
             "Include as many specific details as you can, and avoid adding details.\n"
             # "Note that the summary is incremental, so avoid removing key concepts."
-            "Messages:\n\n" + "\n".join([str(message) for message in event.contents])
+            # "Messages:\n\n" + "\n".join([str(message) for message in event.contents])
         )
+        summarization_prompt = cast(List[BaseMessage], event.contents)
+        summarization_prompt.append(
+            BaseMessage(type="human", content=summarization_instructions)
+        )
+        await self.log(summarization_prompt, "debug")
 
-        await self.log(summarization_text.split("\n"), "debug")
-        summary = self.llm.invoke(summarization_text)
+        if self.model == "mock":
+            summary = self._mock_invoke()
+        else:
+            summary = self.llm.invoke(summarization_prompt)
 
         await self.log('Sending a "record" event')
         await self.publish(

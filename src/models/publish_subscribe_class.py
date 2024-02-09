@@ -17,9 +17,14 @@ PublisherCallback = Callable[
 
 
 class PublisherSubscriber:
-    """Subscriber abstract class."""
+    """Subscriber abstract class.
 
-    def __init__(self, debug_level: EventsErrorTypes = "error") -> None:
+    Todo
+    ----
+    -   Need debug_level and block ans singleton properties. # BUG
+    """
+
+    def __init__(self, debug_level: EventsErrorTypes = "trace") -> None:
         """
         Initialize the pub/sub parent class.
 
@@ -40,17 +45,19 @@ class PublisherSubscriber:
             (False) Show a spinner while waiting for new messages.
         """
         self._blocked_prompt = True
-        await self.log('"Blocking" new messages')
+        await self.log('"Blocking" new messages', "trace")
 
     async def unblock(self) -> None:
         """Allow for new messages."""
         self._blocked_prompt = False
-        await self.log("Waiting for new messages")
+        await self.log("-" * 20, "trace")
+        await self.log("Waiting for new messages", "trace")
 
     @property
+    # @classmethod
     def blocked_prompt(self) -> bool:
         """
-        Simple wrapper of the property to get the blocked prompt.
+        Wrap the property to get the blocked prompt.
 
         Returns
         -------
@@ -77,7 +84,13 @@ class PublisherSubscriber:
             <= DEBUG_LEVELS[cast(EventsErrorTypes, self.debug_level)]
         ):
             await self.publish(
-                ["print"], MessageEvent("system_message", "system", msg, message_type)
+                ["print"],
+                MessageEvent(
+                    event_type="system_message",
+                    author="system",
+                    contents=msg,
+                    system_type=message_type,
+                ),
             )
 
     @abstractmethod

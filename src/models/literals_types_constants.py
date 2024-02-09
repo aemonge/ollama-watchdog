@@ -2,28 +2,18 @@
 
 from typing import AsyncIterator, Dict, List, Literal
 
-from langchain_core.messages import (
-    AIMessage,
-    AIMessageChunk,
-    ChatMessage,
-    ChatMessageChunk,
-    HumanMessage,
-    HumanMessageChunk,
-)
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
 MessageContentType = (
     str
     | List[str]
-    | AsyncIterator[BaseMessageChunk]
-    | List[BaseMessage]
+    | AsyncIterator[str]
     | BaseMessage
-    | AIMessage
-    | AIMessageChunk
-    | ChatMessage
-    | ChatMessageChunk
-    | HumanMessage
-    | HumanMessageChunk
+    | List[BaseMessage]
+    | AsyncIterator[BaseMessage]
+    | BaseMessageChunk
+    | List[BaseMessageChunk]
+    | AsyncIterator[BaseMessageChunk]
 )
 
 TopicsLiteral = Literal[
@@ -36,6 +26,7 @@ TopicsLiteral = Literal[
 ]
 EventsLiteral = Literal[
     "ai_message",
+    "chat",
     "chat_summary",
     "human_processed_message",
     "human_raw_message",

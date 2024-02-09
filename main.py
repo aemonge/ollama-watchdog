@@ -17,7 +17,7 @@ from twisted.internet import reactor  # noqa: E402
 
 @click.command()
 @click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
-@click.option("--model", default="codebooga:34b-v0.1-q5_0", help="Model to use.")
+@click.option("--model", default="mock", help="Model to use.")
 @click.option("--error-level", default="warning", help="choose a debug level")
 def run(prompt_file: str, model: str, error_level: EventsErrorTypes) -> None:
     """
