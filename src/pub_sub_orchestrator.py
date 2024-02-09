@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from src.chatter import Chatter
+from src.logger import Logger
 from src.models.literals_types_constants import EventsErrorTypes, TopicsLiteral
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherSubscriber
@@ -16,7 +17,7 @@ from src.summarizer import Summarizer
 from src.watcher import Watcher
 
 
-class PubSubOrchestrator:
+class PubSubOrchestrator(object):
     """Manages subscribers and publishes messages."""
 
     def __init__(
@@ -37,21 +38,20 @@ class PubSubOrchestrator:
         self.filename = prompt_file
         self.user = str(os.getenv("USER"))
 
-        self.chatter = Chatter(self.publish, model=model, debug_level=debug_level)
-        self.prompt_processor = PromptProcessor(
-            self.user, self.publish, debug_level=debug_level
+        self.printer = Printer(self.publish)
+        self.logger = Logger(
+            system_message=self.printer.system_message, debug_level=debug_level
         )
-        self.printer = Printer(self.publish, debug_level=debug_level)
-        self.recorder = Recorder(
-            str(uuid4()), "sqlite:///sqlite.db", self.publish, debug_level=debug_level
-        )
-        self.summarizer = Summarizer(self.publish, model=model, debug_level=debug_level)
+
+        self.chatter = Chatter(self.publish, model=model)
+        self.prompt_processor = PromptProcessor(self.user, self.publish)
+        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
+        self.summarizer = Summarizer(self.publish, model=model)
         self.watcher = Watcher(
             self.filename,
             self.user,
             asyncio.get_event_loop(),
             self.publish,
-            debug_level=debug_level,
         )
 
         self.processed_events: set = set()  # Set to store processed event timestamps
@@ -104,7 +104,7 @@ class PubSubOrchestrator:
         observer = self.watcher.start_watching()
 
         try:
-            await self.watcher.log("Started Ollama Watch Dog")
+            await self.logger.log("Started Ollama Watch Dog")
             while True:
                 await asyncio.sleep(3600)
         finally:

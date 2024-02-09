@@ -22,7 +22,6 @@ class Recorder(PublisherSubscriber):
         session_id: str,
         connection_string: str,
         publish: PublisherCallback,
-        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Initialize the Recorder.
@@ -35,10 +34,7 @@ class Recorder(PublisherSubscriber):
             The connection string for the SQLite database.
         publish : PublisherCallback
             publish a new event to parent
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
-        super().__init__(debug_level=debug_level)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self.history: Dict[DatabasePrefixes, SQLChatMessageHistory] = {
             "unprocessed": SQLChatMessageHistory(
@@ -152,7 +148,7 @@ class Recorder(PublisherSubscriber):
             The event containing the message.
         """
         self.history["summarized"].add_message(cast(BaseMessage, event.contents))
-        await self.unblock()
+        self.block = False
 
     async def listen(self, event: MessageEvent) -> None:
         """

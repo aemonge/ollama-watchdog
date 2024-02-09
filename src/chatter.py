@@ -2,12 +2,11 @@
 
 
 import asyncio
-from typing import AsyncIterator, cast
+from typing import AsyncIterator
 
 from langchain_community.chat_models import ChatOllama
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
-from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -19,7 +18,6 @@ class Chatter(PublisherSubscriber):
         self,
         publish: PublisherCallback,
         model: str = "mock",
-        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Construct the LLM chat with SQLite.
@@ -30,10 +28,7 @@ class Chatter(PublisherSubscriber):
             The model to use for the LLM.
         publish : PublisherCallback
             publish a new event to parent
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
-        super().__init__(debug_level=debug_level)
         self.model = model
         self.llm = ChatOllama(model=model)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]

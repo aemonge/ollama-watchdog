@@ -19,7 +19,6 @@ class PromptProcessor(PublisherSubscriber):
         self,
         author: str,
         publish: PublisherCallback,
-        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Construct the prompt processor.
@@ -30,10 +29,7 @@ class PromptProcessor(PublisherSubscriber):
             The user name, as author.
         publish : PublisherCallback
             publish a new event to parent
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
-        super().__init__(debug_level=debug_level)
         self.author = author
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 

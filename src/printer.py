@@ -38,7 +38,7 @@ class Printer(PublisherSubscriber):
     """Print with beautiful markdown."""
 
     def __init__(
-        self, publish: PublisherCallback, debug_level: EventsErrorTypes = "warning"
+        self, publish: PublisherCallback
     ) -> None:
         """
         Construct a new Printer.
@@ -47,10 +47,7 @@ class Printer(PublisherSubscriber):
         ----------
         publish : PublisherCallback
             publish a new event to parent
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
-        super().__init__(debug_level=debug_level)
         self.console = Console()
         self._buffer = ""
         self._spinId = 0

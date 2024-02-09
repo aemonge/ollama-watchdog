@@ -1,10 +1,10 @@
 """Subscriber abstract class."""
 
 from abc import abstractmethod
-from typing import Any, Callable, Coroutine, List, Optional, cast
+from typing import Any, Callable, Coroutine, List, Optional
 
+from src.logger import Logger
 from src.models.literals_types_constants import (
-    DEBUG_LEVELS,
     EventsErrorTypes,
     MessageContentType,
     TopicsLiteral,
@@ -17,60 +17,37 @@ PublisherCallback = Callable[
 
 
 class PublisherSubscriber:
-    """Subscriber abstract class.
-
-    Todo
-    ----
-    -   Need debug_level and block ans singleton properties. # BUG
-    """
-
-    def __init__(self, debug_level: EventsErrorTypes = "trace") -> None:
-        """
-        Initialize the pub/sub parent class.
-
-        Parameters
-        ----------
-        debug_level : EventsErrorTypes
-            (warning) The type of message to log.
-        """
-        self.debug_level = debug_level
-
-    async def block(self, show_spinner: bool = False) -> None:
-        """
-        Block new messages waiting for the process.
-
-        Parameters
-        ----------
-        show_spinner : bool
-            (False) Show a spinner while waiting for new messages.
-        """
-        self._blocked_prompt = True
-        await self.log('"Blocking" new messages', "trace")
-
-    async def unblock(self) -> None:
-        """Allow for new messages."""
-        self._blocked_prompt = False
-        await self.log("-" * 20, "trace")
-        await self.log("Waiting for new messages", "trace")
+    """Subscriber abstract class."""
 
     @property
-    # @classmethod
-    def blocked_prompt(self) -> bool:
+    def block(self) -> bool:
         """
-        Wrap the property to get the blocked prompt.
+        Get the value of the block property.
 
         Returns
         -------
         : bool
-            The blocked prompt.
+            The block value
         """
-        return self._blocked_prompt
+        return Logger.get_instance().block
+
+    @block.setter
+    async def block(self, value: bool) -> None:
+        """
+        Set the value of the block property.
+
+        Parameters
+        ----------
+        value : bool
+            The value to set.
+        """
+        Logger.get_instance().block = value
 
     async def log(
         self, msg: MessageContentType, message_type: EventsErrorTypes = "trace"
     ) -> None:
         """
-        Use the "print" topic, and "system_message" to log messages.
+        Use the logger "print" to log messages.
 
         Parameters
         ----------
@@ -79,19 +56,7 @@ class PublisherSubscriber:
         message_type : EventsErrorTypes
             The type of message to log.
         """
-        if (
-            DEBUG_LEVELS[message_type]
-            <= DEBUG_LEVELS[cast(EventsErrorTypes, self.debug_level)]
-        ):
-            await self.publish(
-                ["print"],
-                MessageEvent(
-                    event_type="system_message",
-                    author="system",
-                    contents=msg,
-                    system_type=message_type,
-                ),
-            )
+        await Logger.get_instance().log(msg, message_type)
 
     @abstractmethod
     def listen(

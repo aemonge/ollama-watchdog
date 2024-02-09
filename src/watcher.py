@@ -6,7 +6,6 @@ from typing import Optional
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -21,7 +20,6 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         loop: asyncio.AbstractEventLoop,
         publish: PublisherCallback,
         filter_duplicated_content: Optional[bool] = True,
-        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Initialize the Watcher.
@@ -38,11 +36,7 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
             publish a new event to parent
         filter_duplicated_content : bool, optional
             Whether to filter out events with duplicated content (default is True).
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
-        super().__init__(debug_level=debug_level)
-        PublisherSubscriber.__init__(self)  # instead of super()
         FileSystemEventHandler.__init__(self)  # instead of super()
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self.filename: str = filename
@@ -72,7 +66,6 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         )
         coroutine = self.publish(["record"], event_data)
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
-        asyncio.run_coroutine_threadsafe(self.block(), self.loop)
 
     def on_modified(self, event: FileModifiedEvent) -> None:
         """
@@ -94,8 +87,9 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         if (
             not self.filter_duplicated_content
             or (self.last_content != current_content)
-            # ) and not self.blocked_prompt:
+            and not self.block
         ):
+            self.block = True
             self._on_modified(current_content)
 
     def start_watching(self) -> Observer:  # type: ignore

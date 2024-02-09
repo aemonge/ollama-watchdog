@@ -19,7 +19,6 @@ class Summarizer(PublisherSubscriber):
         self,
         publish: PublisherCallback,
         model: str = "mock",
-        debug_level: EventsErrorTypes = "warning",
     ) -> None:
         """
         Summarize with an LLM.
@@ -30,10 +29,7 @@ class Summarizer(PublisherSubscriber):
             The model to use for the LLM.
         publish : PublisherCallback
             publish a new event to parent
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
-        super().__init__(debug_level=debug_level)
         self.model = model
         self.llm = ChatOllama(model=model)
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
