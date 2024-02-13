@@ -18,11 +18,12 @@ Todo
 """
 import logging
 import re
-from typing import AsyncIterator
+from typing import AsyncIterator, Coroutine
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
+from src.libs.rich_logger import RichLogging
 
 from src.models.literals_types_constants import MessageContentType
 from src.models.message_event import MessageEvent
@@ -160,23 +161,24 @@ class Printer(PublisherSubscriber):
         if self._column < 0:
             raise ValueError("Console width is too small.")
 
+        full_text = ""
         if isinstance(text, str):
             for char in text:
                 self._print_char(char)
+                full_text += char
         elif isinstance(text, AsyncIterator):
-            full_text = ""
             async for chunk in text:
                 for char in chunk.content:  # pyright: ignore
                     if isinstance(char, str):
                         self._print_char(char)
                         full_text += char
-            self._print_char("\n")
-            full_text += "\n"
-            # TODO: Should I clear and render?
+        # TODO: Should I clear and render?
+        full_text += "\n"
+        self._print_char("\n")
 
-            event_data = MessageEvent("ai_message", author, full_text)
-            logging.warning('Sending a "record" event')
-            await self.publish(["record"], event_data)
+        event_data = MessageEvent("ai_message", author, full_text)
+        logging.warning('Sending a "record" event')
+        await self.publish(["record"], event_data)
 
     def _print_char(self, char: str) -> None:
         """
@@ -211,8 +213,15 @@ class Printer(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
+        logging.warning(f'Printer listen to "{event.event_type}" event')
+        logging.info(event)
         if event.contents is None or event.author is None:
+            logging.error("event.contents is None or event.author is None")
+            logging.error(event)
             return
 
         self.title(event)
-        await self.pretty_print(event.contents, event.author)
+        if isinstance(event.contents, Coroutine):
+            await self.pretty_print(await event.contents, event.author)
+        else:
+            await self.pretty_print(event.contents, event.author)

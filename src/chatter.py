@@ -8,8 +8,8 @@ from langchain_community.llms.vllm import VLLM
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
-from src.libs.rich_logger import RichLogging
 
+from src.libs.rich_logger import RichLogging
 from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
@@ -111,29 +111,12 @@ class Chatter(PublisherSubscriber):
 
         logging.warning(f'Chatting with "{self.model}"')
         if self.model == "mock":
-            stream = self._mock_astream()
-            await self.publish(
-                ["print"],
-                MessageEvent("ai_message", self.model, contents=stream),
-            )
-            logging.warning('Streaming the "print" event')
-            return
+            response = self._mock_astream()
+        else:
+            with RichLogging.quiet():
+                response = self.llm.invoke(event.contents)
 
-        logging.info(f"Event: {event}")
-        logging.info(
-            f'Event.contents: type "{type(event.contents)}", '
-            + f' len "{len(event.contents)}" "'
-            + (
-                f' type[0] "{type(event.contents[0])}" "'
-                if len(event.contents) > 0
-                else ""
-            )
-        )
-
-        with RichLogging.quiet():
-            response = self.llm.invoke(event.contents)
-        await self.publish(
-            ["print"],
-            MessageEvent("ai_message", self.model, contents=response),
-        )
-        logging.warning('Streaming the "print" event')
+        event = MessageEvent("ai_message", self.model, contents=response)
+        logging.warning('Chatter is sending a "print" event')
+        logging.info(event)
+        await self.publish(["print"], event)

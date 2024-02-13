@@ -1,11 +1,12 @@
 """The allow topics and event types."""
 
-from typing import AsyncIterator, Dict, List, Literal
+from typing import Any, AsyncIterator, Coroutine, List, Literal
 
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
 MessageContentType = (
     str
+    | Coroutine[Any, Any, str]
     | List[str]
     | AsyncIterator[str]
     | BaseMessage

@@ -164,7 +164,8 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the chunked response.
         """
-        logging.warning(f'Recording (recorder `listen`) a "{event.event_type}"')
+        logging.warning(f'Recorder listen to "{event.event_type}" event')
+        logging.info(event)
         if event.contents is None:
             logging.error(
                 "Cant record empty and None event.contents "
