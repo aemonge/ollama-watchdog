@@ -3,11 +3,14 @@
 """The CLI runner for ollama watch dog with a tail."""
 
 import asyncio
+import logging
+from typing import Optional
 
 import click
+from torch.cuda import get_device_properties, set_device, empty_cache
 from twisted.internet import asyncioreactor
 
-from src.models.literals_types_constants import EventsErrorTypes
+from src.libs.rich_logger import RichLogging
 from src.pub_sub_orchestrator import PubSubOrchestrator
 
 asyncioreactor.install(asyncio.get_event_loop())
@@ -18,8 +21,21 @@ from twisted.internet import reactor  # noqa: E402
 @click.command()
 @click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
 @click.option("--model", default="mock", help="Model to use.")
-@click.option("--error-level", default="warning", help="choose a debug level")
-def run(prompt_file: str, model: str, error_level: EventsErrorTypes) -> None:
+@click.option(
+    "--log-level",
+    type=click.Choice(
+        [name for name, _ in logging._nameToLevel.items()], case_sensitive=False
+    ),
+    default="WARNING",
+    help="choose a debug level",
+)
+@click.option("--cuda-device-id", type=int, help="choose a debug level")
+def run(
+    prompt_file: str,
+    model: str,
+    log_level: str,
+    cuda_device_id: Optional[int],
+) -> None:
     """
     Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
 
@@ -60,12 +76,28 @@ def run(prompt_file: str, model: str, error_level: EventsErrorTypes) -> None:
         The file to watch for prompts.
     model : str
         The model to use.
-    error_level : EventsErrorTypes
-        The debug level to use.
+    log_level : str
+        The error level to use in logger.
+    cuda_device_id : Optional[int]
+        The ID of the CUDA device to use.
     """
-    orchestrator = PubSubOrchestrator(
-        prompt_file=prompt_file, model=model, debug_level=error_level
+    logging.basicConfig(
+        level=log_level.upper(),
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichLogging()],
     )
+
+    empty_cache()
+    if cuda_device_id is not None:
+        set_device(cuda_device_id)
+        _props = get_device_properties(cuda_device_id)
+        logging.info(  # noqa: T201
+            f"Cuda device info: {_props.name}, "
+            + f"{_props.total_memory / (1024 ** 2):.0f}MB, "
+            + f"multi_processor_count={_props.multi_processor_count}"
+        )
+    orchestrator = PubSubOrchestrator(prompt_file=prompt_file, model=model)
 
     asyncio.ensure_future(orchestrator.start())
     reactor.run()  # type: ignore

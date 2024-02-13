@@ -1,13 +1,13 @@
 """Manages subscribers and publishes messages."""
 
 import asyncio
+import logging
 import os
 from typing import Dict, List, Optional
 from uuid import uuid4
 
 from src.chatter import Chatter
-from src.logger import Logger
-from src.models.literals_types_constants import EventsErrorTypes, TopicsLiteral
+from src.models.literals_types_constants import TopicsLiteral
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherSubscriber
 from src.printer import Printer
@@ -20,9 +20,7 @@ from src.watcher import Watcher
 class PubSubOrchestrator(object):
     """Manages subscribers and publishes messages."""
 
-    def __init__(
-        self, prompt_file: str, model: str, debug_level: EventsErrorTypes
-    ) -> None:
+    def __init__(self, prompt_file: str, model: str) -> None:
         """
         Initialize the PubSubOrchestrator.
 
@@ -32,16 +30,11 @@ class PubSubOrchestrator(object):
             The file to watch.
         model : str
             The LLM model to use.
-        debug_level : EventsErrorTypes
-            The debug level to use.
         """
         self.filename = prompt_file
         self.user = str(os.getenv("USER"))
 
         self.printer = Printer(self.publish)
-        self.logger = Logger(
-            system_message=self.printer.system_message, debug_level=debug_level
-        )
 
         self.chatter = Chatter(self.publish, model=model)
         self.prompt_processor = PromptProcessor(self.user, self.publish)
@@ -104,7 +97,7 @@ class PubSubOrchestrator(object):
         observer = self.watcher.start_watching()
 
         try:
-            await self.logger.log("Started Ollama Watch Dog")
+            logging.info("Started Ollama Watch Dog")
             while True:
                 await asyncio.sleep(3600)
         finally:

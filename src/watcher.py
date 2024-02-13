@@ -1,6 +1,7 @@
 """Monitors file changes and publishes an event."""
 
 import asyncio
+import logging
 from typing import Optional
 
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
@@ -56,18 +57,12 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         """
         self.last_content = current_content
         event_data = MessageEvent("human_raw_message", self.user, current_content)
-        asyncio.run_coroutine_threadsafe(
-            self.log(f'Changes detected on "{self.filename}"'),
-            self.loop,
-        )
+        logging.info(f'Changes detected on "{self.filename}"')
         asyncio.run_coroutine_threadsafe(
             self.block(True),
             self.loop,
         )
-        asyncio.run_coroutine_threadsafe(
-            self.log('Sending "record" event'),
-            self.loop,
-        )
+        logging.info('Sending "record" event')
         coroutine = self.publish(["record"], event_data)
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 

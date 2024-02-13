@@ -1,14 +1,10 @@
 """Subscriber abstract class."""
 
+import logging
 from abc import abstractmethod
 from typing import Any, Callable, Coroutine, List, Optional
 
-from src.logger import Logger
-from src.models.literals_types_constants import (
-    EventsErrorTypes,
-    MessageContentType,
-    TopicsLiteral,
-)
+from src.models.literals_types_constants import TopicsLiteral
 from src.models.message_event import MessageEvent
 
 PublisherCallback = Callable[
@@ -28,7 +24,8 @@ class PublisherSubscriber:
         : bool
             The block value
         """
-        return Logger.get_instance().is_blocked()
+        logging.critical("Must define the block property")
+        return False
 
     async def block(self, value: bool) -> None:
         """
@@ -39,22 +36,7 @@ class PublisherSubscriber:
         value : bool
             The value to set.
         """
-        await Logger.get_instance().block(value)
-
-    async def log(
-        self, msg: MessageContentType, message_type: EventsErrorTypes = "trace"
-    ) -> None:
-        """
-        Use the logger "print" to log messages.
-
-        Parameters
-        ----------
-        msg : MessageContentType
-            The message to log.
-        message_type : EventsErrorTypes
-            The type of message to log.
-        """
-        await Logger.get_instance().log(msg, message_type)
+        logging.critical(f"Must define the block method {value}")
 
     @abstractmethod
     def listen(

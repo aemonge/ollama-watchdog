@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional
 
 from src.models.literals_types_constants import (
-    EventsErrorTypes,
     EventsLiteral,
     EventsLoadingTypes,
     MessageContentType,
@@ -23,7 +22,7 @@ class MessageEvent:
         The type of the event.
     author : str
         The author of the event.
-    system_type : Optional[EventsErrorTypes | EventsLoadingTypes]
+    system_type : Optional[EventsLoadingTypes]
         The system type of event, optional.
     contents : MessageContentType
         The contents of the file.
@@ -34,5 +33,5 @@ class MessageEvent:
     event_type: EventsLiteral
     author: Optional[str] = None
     contents: Optional[MessageContentType] = None
-    system_type: Optional[EventsErrorTypes | EventsLoadingTypes] = None
+    system_type: Optional[EventsLoadingTypes] = None
     created_at: datetime = field(default_factory=datetime.now)

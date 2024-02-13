@@ -1,5 +1,6 @@
 """Here we will define the prompt processing."""
 
+import logging
 
 from src.libs.ask_webllm import ask_web_llm
 from src.libs.bash_run import bash_run
@@ -7,7 +8,6 @@ from src.libs.file_include import replace_include_tags
 from src.libs.http_include import get_website_content
 from src.libs.remove_comments import remove_comments
 from src.libs.web_search import search_online
-from src.models.literals_types_constants import EventsErrorTypes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -66,13 +66,13 @@ class PromptProcessor(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
-        await self.log("Processing prompt")
+        logging.info("Processing prompt")
         if not isinstance(event.contents, str):
             return
 
         contents = self._chain_prompt(event.contents)
-        await self.log(contents, "debug")
-        await self.log('Sending a "record" event')
+        logging.debug(contents, "debug")
+        logging.info('Sending a "record" event')
         await self.publish(
             ["record"],
             MessageEvent(

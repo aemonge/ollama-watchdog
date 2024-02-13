@@ -1,5 +1,6 @@
 """Record the conversation between AI and Human in a SQLite DB."""
 
+import logging
 from typing import Dict, cast
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
@@ -90,7 +91,7 @@ class Recorder(PublisherSubscriber):
         contents: MessageContentType = [self._last_human_processed_message, msg]
         contents += self.history["processed"].messages[-SUMMARIZE_EVERY:]
 
-        await self.log('Sending a "summarize" event')
+        logging.info('Sending a "summarize" event')
         await self.publish(["summarize"], MessageEvent(
             "chat_summary",
             event.author,
@@ -114,7 +115,7 @@ class Recorder(PublisherSubscriber):
         contents: MessageContentType
         contents = self.history["processed"].messages[-SUMMARIZE_EVERY:]
 
-        await self.log('Sending "ask" event')
+        logging.info('Sending "ask" event')
         await self.publish(["ask"], MessageEvent(
             "chat",
             event.author,
@@ -133,7 +134,7 @@ class Recorder(PublisherSubscriber):
         msg = self._normalize_base_message(event)
 
         self.history["unprocessed"].add_message(msg)
-        await self.log('Sending ["print, "chain"] events')
+        logging.info('Sending ["print, "chain"] events')
         await self.publish(["print", "chain"], event)
 
     async def _chat_summary(self, event: MessageEvent) -> None:
@@ -158,15 +159,13 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the chunked response.
         """
-        await self.log(f'Recording a "{event.event_type}"')
+        logging.info(f'Recording a "{event.event_type}"')
         if event.contents is None:
-            await self.log(
-                "Cant record empty and None event.contents in {}" + str(
-                    self.__class__.__name__
-                ),
-                "error",
+            logging.error(
+                "Cant record empty and None event.contents "
+                + f"in {self.__class__.__name__}"
             )
-        await self.log(cast(MessageContentType, event.contents), "debug")
+        logging.debug(cast(MessageContentType, event.contents))
 
         match event.event_type:
             case "ai_message":

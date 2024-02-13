@@ -32,22 +32,6 @@ EventsLiteral = Literal[
     "human_raw_message",
     "system_message",
 ]
-EventsErrorTypes = Literal[
-    "critical",
-    "error",
-    "warning",
-    "info",
-    "trace",
-    "debug",
-]
-DEBUG_LEVELS: Dict[EventsErrorTypes, int] = {
-    "critical": 0,
-    "error": 1,
-    "warning": 2,
-    "info": 3,
-    "trace": 4,
-    "debug": 5,
-}
 EventsLoadingTypes = Literal[
     "loaded",
     "loading",
@@ -63,13 +47,13 @@ CONSOLE_PADDING = 1
 RESPONSE_TIMEOUT = 10
 TIMEOUT = 3000
 SUMMARIZE_EVERY = 8
+VLLM_DOWNLOAD_PATH = "/home/LLM/"
 
-LOG_STYLES: Dict[EventsErrorTypes, str] = {
-    "critical": "red bold",
-    "error": "#dc322f",
-    "warning": "#b58900",
-    "info": "#268bd2",
-    "trace": "#839496",
-    "debug": "#586e75",
+LOG_STYLES: Dict[str, str] = {
+    "CRITICAL": "#dc322f bold",
+    "ERROR": "#b58900",
+    "WARNING": "#268bd2",
+    "INFO": "#839496",
+    "DEBUG": "#586e75 italic",
 }
 LOG_LINE_BG = "#002b36"

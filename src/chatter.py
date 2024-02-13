@@ -1,14 +1,15 @@
 """Here we will define the LLM conversation."""
 
-
 import asyncio
+import logging
 from typing import AsyncIterator, List, Union, cast
 
-from langchain_community.chat_models import ChatOllama
+from langchain_community.llms.vllm import VLLM
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
+from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -32,7 +33,17 @@ class Chatter(PublisherSubscriber):
             publish a new event to parent
         """
         self.model = model
-        self.llm = ChatOllama(model=model)
+        self.llm = VLLM(
+            client=None,
+            model=model,
+            download_dir=VLLM_DOWNLOAD_PATH,
+            trust_remote_code=True,  # mandatory for hf models
+            vllm_kwargs={
+                "gpu_memory_utilization": 0.95,
+                "max_model_len": 4096,  # 8192,
+                "enforce_eager": True,
+            },
+        )
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
     async def _mock_astream(self) -> AsyncIterator[BaseMessageChunk]:
@@ -91,19 +102,19 @@ class Chatter(PublisherSubscriber):
         ):
             msg = f'Type "List[BaseMessage|str]" in {self.__class__.__name__} '
             msg += f"expected: {event.contents}"
-            await self.log(msg, "error")
+            logging.error(msg)
             return
 
-        await self.log(f'Chatting with "{self.model}"')
+        logging.info(f'Chatting with "{self.model}"')
         if self.model == "mock":
             stream = self._mock_astream()
         else:
-            await self.log(event.contents, "debug")
+            logging.debug(event.contents)
             stream = self.llm.astream(
                 self._convert_base_message(cast(List[BaseMessage], event.contents))
             )
 
-        await self.log('Streaming the "print" event')
+        logging.info('Streaming the "print" event')
         await self.publish(
             ["print"],
             MessageEvent("ai_message", self.model, contents=stream),

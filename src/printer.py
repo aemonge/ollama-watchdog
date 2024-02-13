@@ -16,20 +16,15 @@ Todo
 [ ] Stop the buffer on <EOF> or <EOB> block end signals
 [ ] Fix issue with block code with no language.
 """
+import logging
 import re
-import textwrap
-from typing import AsyncIterator, cast
+from typing import AsyncIterator
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
 
-from src.models.literals_types_constants import (
-    LOG_LINE_BG,
-    LOG_STYLES,
-    EventsErrorTypes,
-    MessageContentType,
-)
+from src.models.literals_types_constants import MessageContentType
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -37,9 +32,7 @@ from src.models.publish_subscribe_class import PublisherCallback, PublisherSubsc
 class Printer(PublisherSubscriber):
     """Print with beautiful markdown."""
 
-    def __init__(
-        self, publish: PublisherCallback
-    ) -> None:
+    def __init__(self, publish: PublisherCallback) -> None:
         """
         Construct a new Printer.
 
@@ -129,34 +122,6 @@ class Printer(PublisherSubscriber):
 
         return False
 
-    def system_message(self, event: MessageEvent) -> None:
-        """
-        Print a system_message.
-
-        Parameters
-        ----------
-        event : MessageEvent
-            The message from where to extract the author and date.
-        """
-        msgs = event.contents if isinstance(event.contents, list) else [event.contents]
-        for msg in msgs:
-            style = (
-                LOG_STYLES[event.system_type] if event.system_type in LOG_STYLES else ""
-            )
-            _msg = msg if isinstance(msg, str) else repr(msg)
-
-            # Split the message into parts that fit the console width
-            parts = [
-                _msg[i : i + self.console.width]
-                for i in range(0, len(_msg), self.console.width)
-            ]
-
-            # Display each part with its own console.rule
-            for part in parts:
-                self.console.rule(
-                    title=Text(part, style), align="right", style=LOG_LINE_BG
-                )
-
     def title(self, event: MessageEvent) -> None:
         """
         Print the title, prettier.
@@ -201,15 +166,16 @@ class Printer(PublisherSubscriber):
         elif isinstance(text, AsyncIterator):
             full_text = ""
             async for chunk in text:
-                for char in chunk.content:
+                for char in chunk.content:  # pyright: ignore
                     if isinstance(char, str):
                         self._print_char(char)
                         full_text += char
             self._print_char("\n")
             full_text += "\n"
+            # TODO: Should I clear and render?
 
             event_data = MessageEvent("ai_message", author, full_text)
-            await self.log('Sending a "record" event')
+            logging.info('Sending a "record" event')
             await self.publish(["record"], event_data)
 
     def _print_char(self, char: str) -> None:
@@ -248,8 +214,5 @@ class Printer(PublisherSubscriber):
         if event.contents is None or event.author is None:
             return
 
-        if event.event_type == "system_message":
-            self.system_message(event)
-        else:
-            self.title(event)
-            await self.pretty_print(event.contents, event.author)
+        self.title(event)
+        await self.pretty_print(event.contents, event.author)

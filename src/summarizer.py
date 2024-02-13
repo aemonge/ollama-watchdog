@@ -1,11 +1,11 @@
 """The class that will store and summarize the history of conversations."""
 
+import logging
 from typing import List, Union, cast
 
 from langchain_community.chat_models import ChatOllama
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.messages.ai import AIMessage
-from langchain_core.messages import BaseMessage
 from langchain_core.messages.base import BaseMessageChunk
 
 from src.models.message_event import MessageEvent
@@ -13,7 +13,13 @@ from src.models.publish_subscribe_class import PublisherCallback, PublisherSubsc
 
 
 class Summarizer(PublisherSubscriber):
-    """The class that will store and summarize the history of conversations."""
+    """
+    The class that will store and summarize the history of conversations.
+
+    This are the recommended models for summarization:
+    * google/mt5-small
+    * DistilBERT
+    """
 
     def __init__(
         self,
@@ -88,10 +94,10 @@ class Summarizer(PublisherSubscriber):
         ):
             _msg = "Event contents isn't a 'List[BaseMessage]' "
             _msg += f"in {self.__class__.__name__}"
-            await self.log(_msg, "error")
+            logging.error(_msg)
             return
 
-        await self.log("Summarizing")
+        logging.info("Summarizing")
         summarization_instructions = (
             "Distill the above chat messages into a single summary message.\n"
             "Include as many specific details as you can, and avoid adding details.\n"
@@ -101,7 +107,7 @@ class Summarizer(PublisherSubscriber):
         summarization_prompt.append(
             BaseMessage(type="human", content=summarization_instructions)
         )
-        await self.log(summarization_prompt, "debug")
+        logging.info(summarization_prompt, "debug")
 
         if self.model == "mock":
             summary = self._mock_invoke()
@@ -110,7 +116,7 @@ class Summarizer(PublisherSubscriber):
                 self._convert_base_message(cast(List[BaseMessage], event.contents))
             )
 
-        await self.log('Sending a "record" event')
+        logging.info('Sending a "record" event')
         await self.publish(
             ["record"],
             MessageEvent("chat_summary", self.model, cast(str, summary.content)),
