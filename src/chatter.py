@@ -109,18 +109,18 @@ class Chatter(PublisherSubscriber):
             logging.error(msg)
             return
 
-        logging.info(f'Chatting with "{self.model}"')
+        logging.warning(f'Chatting with "{self.model}"')
         if self.model == "mock":
             stream = self._mock_astream()
             await self.publish(
                 ["print"],
                 MessageEvent("ai_message", self.model, contents=stream),
             )
-            logging.info('Streaming the "print" event')
+            logging.warning('Streaming the "print" event')
             return
 
-        logging.debug(f"Event: {event}")
-        logging.debug(
+        logging.info(f"Event: {event}")
+        logging.info(
             f'Event.contents: type "{type(event.contents)}", '
             + f' len "{len(event.contents)}" "'
             + (
@@ -136,4 +136,4 @@ class Chatter(PublisherSubscriber):
             ["print"],
             MessageEvent("ai_message", self.model, contents=response),
         )
-        logging.info('Streaming the "print" event')
+        logging.warning('Streaming the "print" event')

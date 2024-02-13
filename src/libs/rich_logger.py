@@ -27,7 +27,7 @@ class RichLogging(RichHandler):
         "CRITICAL": "#D32F2C bold",
         "ERROR": "#dc322f",
         "WARNING": "#694E00",
-        "INFO": "#217AB9",
+        "INFO": "#326990",
         "TRACE": "#586e75",
         "DEBUG": "#38464B",
     }
@@ -115,6 +115,10 @@ class RichLogging(RichHandler):
 
         With support for a custom TRACE level.
 
+        Todo
+        ----
+        [ ] Implement trace.
+
         Parameters
         ----------
         level : str
@@ -122,37 +126,6 @@ class RichLogging(RichHandler):
         """
         logging.addLevelName(cls.TRACE_LEVEL_NUM, "TRACE")
 
-        def trace(
-            self: logging.Logger,
-            message: str,
-            *args: Any,  # noqa: ANN401
-            **kwargs: Any,  # noqa: ANN401
-        ) -> None:
-            """
-            Log 'message' with severity 'TRACE'.
-
-            To pass exception information, use the keyword argument exc_info with
-            a true value, e.g.
-
-                logger.trace("Houston, we have a %s", "thorny problem", exc_info=1)
-
-            Parameters
-            ----------
-            self : logging.Logger
-                The logger instance.
-            message : str
-                The message to log.
-            *args: Any
-                Any extra arguments
-            **kwargs: Any
-                Any extra keyword arguments
-            """
-            if self.isEnabledFor(cls.TRACE_LEVEL_NUM):
-                self._log(cls.TRACE_LEVEL_NUM, message, args, **kwargs)
-
-        logging.Logger.trace = trace  # type: ignore
-
-        # Configure basic logging with RichLogging handler
         logging.basicConfig(
             level=level.upper(),
             format="%(message)s",

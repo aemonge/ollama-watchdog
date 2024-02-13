@@ -96,8 +96,8 @@ class Recorder(PublisherSubscriber):
             contents=contents
         )
 
-        logging.info('Sending a "summarize" event')
-        logging.debug(event)
+        logging.warning('Sending a "summarize" event')
+        logging.info(event)
         await self.publish(["summarize"], event)
 
     async def _human_processed_message(self, event: MessageEvent) -> None:
@@ -122,8 +122,8 @@ class Recorder(PublisherSubscriber):
             contents=contents
         )
 
-        logging.info('Sending "ask" event')
-        logging.debug(event)
+        logging.warning('Sending "ask" event')
+        logging.info(event)
         await self.publish(["ask"], event)
 
     async def _human_raw_message(self, event: MessageEvent) -> None:
@@ -138,8 +138,8 @@ class Recorder(PublisherSubscriber):
         msg = self._normalize_base_message(event)
 
         self.history["unprocessed"].add_message(msg)
-        logging.info('Sending ["print, "chain"] events')
-        logging.debug(event)
+        logging.warning('Sending ["print, "chain"] events')
+        logging.info(event)
         await self.publish(["print", "chain"], event)
 
     async def _chat_summary(self, event: MessageEvent) -> None:
@@ -164,7 +164,7 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the chunked response.
         """
-        logging.info(f'Recording (recorder `listen`) a "{event.event_type}"')
+        logging.warning(f'Recording (recorder `listen`) a "{event.event_type}"')
         if event.contents is None:
             logging.error(
                 "Cant record empty and None event.contents "

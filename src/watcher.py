@@ -57,13 +57,13 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         """
         self.last_content = current_content
         event_data = MessageEvent("human_raw_message", self.user, current_content)
-        logging.info(f'Changes detected on "{self.filename}"')
+        logging.warning(f'Changes detected on "{self.filename}"')
         asyncio.run_coroutine_threadsafe(
             self.block(True),
             self.loop,
         )
-        logging.info('Sending "record" event')
-        logging.debug(event_data)
+        logging.warning('Sending "record" event')
+        logging.info(event_data)
         coroutine = self.publish(["record"], event_data)
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 

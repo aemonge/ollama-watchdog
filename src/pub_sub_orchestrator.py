@@ -97,7 +97,7 @@ class PubSubOrchestrator(object):
         observer = self.watcher.start_watching()
 
         try:
-            logging.info("Started Ollama Watch Dog")
+            logging.warning("Started Ollama Watch Dog")
             while True:
                 await asyncio.sleep(3600)
         finally:

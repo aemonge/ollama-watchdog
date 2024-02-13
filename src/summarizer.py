@@ -97,7 +97,7 @@ class Summarizer(PublisherSubscriber):
             logging.error(_msg)
             return
 
-        logging.info("Summarizing")
+        logging.warning("Summarizing")
         summarization_instructions = (
             "Distill the above chat messages into a single summary message.\n"
             "Include as many specific details as you can, and avoid adding details.\n"
@@ -107,7 +107,7 @@ class Summarizer(PublisherSubscriber):
         summarization_prompt.append(
             BaseMessage(type="human", content=summarization_instructions)
         )
-        logging.info(summarization_prompt, "debug")
+        logging.warning(summarization_prompt, "debug")
 
         if self.model == "mock":
             summary = self._mock_invoke()
@@ -116,7 +116,7 @@ class Summarizer(PublisherSubscriber):
                 self._convert_base_message(cast(List[BaseMessage], event.contents))
             )
 
-        logging.info('Sending a "record" event')
+        logging.warning('Sending a "record" event')
         await self.publish(
             ["record"],
             MessageEvent("chat_summary", self.model, cast(str, summary.content)),

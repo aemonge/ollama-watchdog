@@ -66,13 +66,13 @@ class PromptProcessor(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
-        logging.info("Processing prompt")
+        logging.warning("Processing prompt")
         if not isinstance(event.contents, str):
             return
 
         contents = self._chain_prompt(event.contents)
-        logging.debug(contents, "debug")
-        logging.info('Sending a "record" event')
+        logging.info(contents, "debug")
+        logging.warning('Sending a "record" event')
         await self.publish(
             ["record"],
             MessageEvent(

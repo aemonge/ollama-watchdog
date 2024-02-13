@@ -175,7 +175,7 @@ class Printer(PublisherSubscriber):
             # TODO: Should I clear and render?
 
             event_data = MessageEvent("ai_message", author, full_text)
-            logging.info('Sending a "record" event')
+            logging.warning('Sending a "record" event')
             await self.publish(["record"], event_data)
 
     def _print_char(self, char: str) -> None:
