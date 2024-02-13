@@ -8,6 +8,7 @@ from langchain_community.llms.vllm import VLLM
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
+from src.libs.rich_logger import RichLogging
 
 from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH
 from src.models.message_event import MessageEvent
@@ -33,19 +34,20 @@ class Chatter(PublisherSubscriber):
             publish a new event to parent
         """
         self.model = model
-        self.llm = VLLM(
-            verbose=False,
-            client=None,
-            model=model,
-            download_dir=VLLM_DOWNLOAD_PATH,
-            trust_remote_code=True,  # mandatory for hf models
-            vllm_kwargs={
-                "gpu_memory_utilization": 0.95,
-                "max_model_len": 1024,  # 4096,  # 8192,
-                "enforce_eager": True,
-            },
-            max_new_tokens=128,  # 512
-        )
+        with RichLogging.quiet():
+            self.llm = VLLM(
+                verbose=False,
+                client=None,
+                model=model,
+                download_dir=VLLM_DOWNLOAD_PATH,
+                trust_remote_code=True,  # mandatory for hf models
+                vllm_kwargs={
+                    "gpu_memory_utilization": 0.95,
+                    "max_model_len": 1024,  # 4096,  # 8192,
+                    "enforce_eager": True,
+                },
+                max_new_tokens=128,  # 512
+            )
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
     async def _mock_astream(self) -> AsyncIterator[BaseMessageChunk]:
@@ -127,7 +129,9 @@ class Chatter(PublisherSubscriber):
                 else ""
             )
         )
-        response = self.llm.invoke(event.contents)
+
+        with RichLogging.quiet():
+            response = self.llm.invoke(event.contents)
         await self.publish(
             ["print"],
             MessageEvent("ai_message", self.model, contents=response),

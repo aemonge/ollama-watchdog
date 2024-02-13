@@ -48,12 +48,3 @@ RESPONSE_TIMEOUT = 10
 TIMEOUT = 3000
 SUMMARIZE_EVERY = 8
 VLLM_DOWNLOAD_PATH = "/home/LLM/"
-
-LOG_STYLES: Dict[str, str] = {
-    "CRITICAL": "#dc322f bold",
-    "ERROR": "#b58900",
-    "WARNING": "#268bd2",
-    "INFO": "#839496",
-    "DEBUG": "#586e75 italic",
-}
-LOG_LINE_BG = "#002b36"

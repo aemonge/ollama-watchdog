@@ -12,7 +12,6 @@ from torch.cuda import get_device_properties, set_device
 from twisted.internet import asyncioreactor
 
 from src.libs.rich_logger import RichLogging
-from src.pub_sub_orchestrator import PubSubOrchestrator
 
 asyncioreactor.install(asyncio.get_event_loop())
 
@@ -25,7 +24,8 @@ from twisted.internet import reactor  # noqa: E402
 @click.option(
     "--log-level",
     type=click.Choice(
-        [name for name, _ in logging._nameToLevel.items()], case_sensitive=False
+        ["TRACE"] + [name for name, _ in logging._nameToLevel.items()],
+        case_sensitive=False,
     ),
     default="WARNING",
     help="choose a debug level",
@@ -82,13 +82,7 @@ def run(
     cuda_device_id : Optional[int]
         The ID of the CUDA device to use.
     """
-    logging.basicConfig(
-        level=log_level.upper(),
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichLogging()],
-        force=True,
-    )
+    RichLogging.config(log_level.upper())
 
     if cuda.is_available():
         cuda.empty_cache()
@@ -101,6 +95,9 @@ def run(
                 + f"{_props.total_memory / (1024 ** 2):.0f}MB, "
                 + f"multi_processor_count={_props.multi_processor_count}"
             )
+
+    from src.pub_sub_orchestrator import PubSubOrchestrator
+
     orchestrator = PubSubOrchestrator(prompt_file=prompt_file, model=model)
 
     asyncio.ensure_future(orchestrator.start())
