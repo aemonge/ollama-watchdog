@@ -7,7 +7,8 @@ import logging
 from typing import Optional
 
 import click
-from torch.cuda import get_device_properties, set_device, empty_cache
+from torch import cuda
+from torch.cuda import get_device_properties, set_device
 from twisted.internet import asyncioreactor
 
 from src.libs.rich_logger import RichLogging
@@ -86,17 +87,20 @@ def run(
         format="%(message)s",
         datefmt="[%X]",
         handlers=[RichLogging()],
+        force=True,
     )
 
-    empty_cache()
-    if cuda_device_id is not None:
-        set_device(cuda_device_id)
-        _props = get_device_properties(cuda_device_id)
-        logging.info(  # noqa: T201
-            f"Cuda device info: {_props.name}, "
-            + f"{_props.total_memory / (1024 ** 2):.0f}MB, "
-            + f"multi_processor_count={_props.multi_processor_count}"
-        )
+    if cuda.is_available():
+        cuda.empty_cache()
+
+        if cuda_device_id is not None:
+            set_device(cuda_device_id)
+            _props = get_device_properties(cuda_device_id)
+            logging.info(  # noqa: T201
+                f"Cuda device info: {_props.name}, "
+                + f"{_props.total_memory / (1024 ** 2):.0f}MB, "
+                + f"multi_processor_count={_props.multi_processor_count}"
+            )
     orchestrator = PubSubOrchestrator(prompt_file=prompt_file, model=model)
 
     asyncio.ensure_future(orchestrator.start())

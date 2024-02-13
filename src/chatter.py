@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import AsyncIterator, List, Union, cast
+from typing import AsyncIterator, List, Union
 
 from langchain_community.llms.vllm import VLLM
 from langchain_core.messages import HumanMessage
@@ -34,15 +34,17 @@ class Chatter(PublisherSubscriber):
         """
         self.model = model
         self.llm = VLLM(
+            verbose=False,
             client=None,
             model=model,
             download_dir=VLLM_DOWNLOAD_PATH,
             trust_remote_code=True,  # mandatory for hf models
             vllm_kwargs={
                 "gpu_memory_utilization": 0.95,
-                "max_model_len": 4096,  # 8192,
+                "max_model_len": 1024,  # 4096,  # 8192,
                 "enforce_eager": True,
             },
+            max_new_tokens=128,  # 512
         )
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
@@ -108,14 +110,26 @@ class Chatter(PublisherSubscriber):
         logging.info(f'Chatting with "{self.model}"')
         if self.model == "mock":
             stream = self._mock_astream()
-        else:
-            logging.debug(event.contents)
-            stream = self.llm.astream(
-                self._convert_base_message(cast(List[BaseMessage], event.contents))
+            await self.publish(
+                ["print"],
+                MessageEvent("ai_message", self.model, contents=stream),
             )
+            logging.info('Streaming the "print" event')
+            return
 
-        logging.info('Streaming the "print" event')
+        logging.debug(f"Event: {event}")
+        logging.debug(
+            f'Event.contents: type "{type(event.contents)}", '
+            + f' len "{len(event.contents)}" "'
+            + (
+                f' type[0] "{type(event.contents[0])}" "'
+                if len(event.contents) > 0
+                else ""
+            )
+        )
+        response = self.llm.invoke(event.contents)
         await self.publish(
             ["print"],
-            MessageEvent("ai_message", self.model, contents=stream),
+            MessageEvent("ai_message", self.model, contents=response),
         )
+        logging.info('Streaming the "print" event')

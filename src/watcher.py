@@ -63,6 +63,7 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
             self.loop,
         )
         logging.info('Sending "record" event')
+        logging.debug(event_data)
         coroutine = self.publish(["record"], event_data)
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 

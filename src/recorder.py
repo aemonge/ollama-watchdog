@@ -1,7 +1,7 @@
 """Record the conversation between AI and Human in a SQLite DB."""
 
 import logging
-from typing import Dict, cast
+from typing import Dict
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages.base import BaseMessage
@@ -90,13 +90,15 @@ class Recorder(PublisherSubscriber):
 
         contents: MessageContentType = [self._last_human_processed_message, msg]
         contents += self.history["processed"].messages[-SUMMARIZE_EVERY:]
-
-        logging.info('Sending a "summarize" event')
-        await self.publish(["summarize"], MessageEvent(
+        event = MessageEvent(
             "chat_summary",
             event.author,
             contents=contents
-        ))
+        )
+
+        logging.info('Sending a "summarize" event')
+        logging.debug(event)
+        await self.publish(["summarize"], event)
 
     async def _human_processed_message(self, event: MessageEvent) -> None:
         """
@@ -114,13 +116,15 @@ class Recorder(PublisherSubscriber):
 
         contents: MessageContentType
         contents = self.history["processed"].messages[-SUMMARIZE_EVERY:]
-
-        logging.info('Sending "ask" event')
-        await self.publish(["ask"], MessageEvent(
+        event = MessageEvent(
             "chat",
             event.author,
             contents=contents
-        ))
+        )
+
+        logging.info('Sending "ask" event')
+        logging.debug(event)
+        await self.publish(["ask"], event)
 
     async def _human_raw_message(self, event: MessageEvent) -> None:
         """
@@ -135,6 +139,7 @@ class Recorder(PublisherSubscriber):
 
         self.history["unprocessed"].add_message(msg)
         logging.info('Sending ["print, "chain"] events')
+        logging.debug(event)
         await self.publish(["print", "chain"], event)
 
     async def _chat_summary(self, event: MessageEvent) -> None:
@@ -159,13 +164,12 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the chunked response.
         """
-        logging.info(f'Recording a "{event.event_type}"')
+        logging.info(f'Recording (recorder `listen`) a "{event.event_type}"')
         if event.contents is None:
             logging.error(
                 "Cant record empty and None event.contents "
                 + f"in {self.__class__.__name__}"
             )
-        logging.debug(cast(MessageContentType, event.contents))
 
         match event.event_type:
             case "ai_message":
