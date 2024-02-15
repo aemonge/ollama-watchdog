@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import AsyncIterator, Iterator, List, Union
+from typing import AsyncIterator, List, Union
 
 from langchain_community.llms.vllm import VLLM
 from langchain_core.callbacks.base import BaseCallbackHandler
@@ -36,7 +36,9 @@ class MuteProcessing(BaseCallbackHandler):
 class Chatter(PublisherSubscriber):
     """The main chat interface."""
 
-    def response_handler(self, prompt: str, responses: Iterator[str]) -> Iterator[str]:
+    async def response_handler(
+        self, prompt: str, responses: AsyncIterator[str]
+    ) -> AsyncIterator[BaseMessageChunk]:
         """
         Handle the response from the LLM, by removing the prompt from the answer.
 
@@ -61,7 +63,7 @@ class Chatter(PublisherSubscriber):
 
         Yields
         ------
-        : str
+        : str | BaseMessageChunk
             The response from the LLM, without the prompt.
         """
         remaining_prompt = prompt
@@ -69,9 +71,9 @@ class Chatter(PublisherSubscriber):
         first_response = True
         prompt_consumed = False
 
-        for response in responses:
+        async for response in responses:
             if prompt_consumed:
-                yield response
+                yield BaseMessageChunk(type="ai", content=response)
 
             if first_response:
                 if response.startswith("\n"):
@@ -79,20 +81,12 @@ class Chatter(PublisherSubscriber):
                 first_response = False
 
             if not response.startswith(remaining_prompt):
-                yield response
+                yield BaseMessageChunk(type="ai", content=response)
 
             remaining_prompt = remaining_prompt[len(response) :]
             if not remaining_prompt:
                 prompt_consumed = True
-            yield response[prompt_length:].strip()
-
-    def _hey_(self):
-        prompt = "What is the capital of France ?"
-        r = self.llm.stream(prompt)
-        print(prompt)
-        for x in self.response_handler(prompt, r):
-            print(x)
-        print("======================================================================")
+            yield BaseMessageChunk(type="ai", content=response[prompt_length:].strip())
 
     def __init__(
         self,
@@ -109,12 +103,12 @@ class Chatter(PublisherSubscriber):
         publish : PublisherCallback
             publish a new event to parent
         """
-        print("======================================================================")
         self.model = model
         with RichLogging.quiet():
             self.llm = VLLM(
                 client=None,
                 callbacks=[MuteProcessing()],
+                cache=False,
                 verbose=False,
                 model=model,
                 download_dir=VLLM_DOWNLOAD_PATH,
@@ -130,8 +124,6 @@ class Chatter(PublisherSubscriber):
                 temperature=0.8,
             )
 
-        self._hey_()
-        return None
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
     async def _mock_astream(self) -> AsyncIterator[BaseMessageChunk]:
@@ -197,8 +189,10 @@ class Chatter(PublisherSubscriber):
         if self.model == "mock":
             response = self._mock_astream()
         else:
-            with RichLogging.quiet():
-                response = self.llm.invoke(event.contents)
+            event.contents = "What is the capital of France ?"  # TODO: Use the contents
+            response = self.response_handler(
+                event.contents, self.llm.astream(event.contents)
+            )
 
         event = MessageEvent("ai_message", self.model, contents=response)
         logging.warning('Chatter is sending a "print" event')

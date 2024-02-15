@@ -18,7 +18,7 @@ Todo
 """
 import logging
 import re
-from typing import AsyncIterator, Coroutine
+from typing import AsyncIterator, Coroutine, Iterator
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -171,6 +171,13 @@ class Printer(PublisherSubscriber):
                     if isinstance(char, str):
                         self._print_char(char)
                         full_text += char
+        elif isinstance(text, Iterator):
+            for chunk in text:
+                for char in chunk.content:  # pyright: ignore
+                    if isinstance(char, str):
+                        self._print_char(char)
+                        full_text += char
+
         full_text += "\n"
         self._print_char("\n")
 
