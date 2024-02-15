@@ -2,16 +2,13 @@
 
 import asyncio
 import logging
-from typing import AsyncIterator, List, Union
+from typing import AsyncIterator, Iterator, List, Union
 
-from langchain.chains import LLMChain
 from langchain_community.llms.vllm import VLLM
-from langchain_core.callbacks.base import BaseCallbackHandler, BaseCallbackManager
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables.config import RunnableConfig
 
 from src.libs.rich_logger import RichLogging
 from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH
@@ -22,105 +19,79 @@ from src.models.publish_subscribe_class import PublisherCallback, PublisherSubsc
 class MuteProcessing(BaseCallbackHandler):
     """Mutes the processing progress bar."""
 
-    def on_llm_start(self, *args, **kwargs):
+    def on_llm_start(
+        self, *args, **kwargs  # noqa: U100, ANN002, ANN003  # pyright: ignore
+    ):  # noqa: ANN201, DAR101
         """Mute on start."""
         self.quiet_context = RichLogging.quiet()
         self.quiet_context.__enter__()
 
-    def on_llm_end(self, *args, **kwargs):
+    def on_llm_end(
+        self, *args, **kwargs  # noqa: U100, ANN002, ANN003  # pyright: ignore
+    ):  # noqa: ANN201, DAR101
         """Un-Mute on end."""
         self.quiet_context.__exit__(None, None, None)
-
-
-class FilterQuestionHandler(BaseCallbackHandler):
-    def on_llm_response(self, response: str, **kwargs) -> str:
-        print("on_llm_response")
-
-    # def on_llm_start(self, *args, **kwargs):
-    #     print("on_llm_start (suppressed processing....)")
-    #     self.quiet_context = RichLogging.quiet()
-    #     self.quiet_context.__enter__()
-    #
-    # def on_llm_end(self, *args, **kwargs):
-    #     self.quiet_context.__exit__(None, None, None)
-    #     print("on_llm_end")
-
-    def on_llm_new_token(self, token: str, **kwargs):
-        print("on_llm_new_token")
-
-    def on_llm_error(self, error: str, **kwargs):
-        print("on_llm_error")
-
-    def on_chain_start(self, *args, **kwargs):
-        print("on_chain_start")
-
-    def on_chain_end(self, *args, **kwargs):
-        print("on_chain_end")
-
-    def on_chain_error(self, error: str, **kwargs):
-        print("on_chain_error")
-
-    def on_tool_start(self, *args, **kwargs):
-        print("on_tool_start")
-
-    def on_tool_end(self, *args, **kwargs):
-        print("on_tool_end")
-
-    def on_tool_error(self, error: str, **kwargs):
-        print("on_tool_error")
-
-    def on_buffer_token(self, token: str, **kwargs):
-        print("on_buffer_token")
-
-    def on_retriever_end(self, error: str, **kwargs):
-        print("on_retriever_end")
-
-    def on_retriever_start(self, error: str, **kwargs):
-        print("on_retriever_start")
-
-    def on_agent_action(self, *args, **kwargs):
-        print("on_agent_action")
-
-    def on_text(self, *args, **kwargs):
-        print("on_text")
 
 
 class Chatter(PublisherSubscriber):
     """The main chat interface."""
 
+    def response_handler(self, prompt: str, responses: Iterator[str]) -> Iterator[str]:
+        """
+        Handle the response from the LLM, by removing the prompt from the answer.
+
+        Alternatively
+        -------------
+
+            if remaining_prompt.startswith(response):
+                remaining_prompt = remaining_prompt[len(response):]
+                if not remaining_prompt:
+                    prompt_consumed = True
+                continue
+            else:
+                prompt_consumed = True
+                yield response
+
+        Parameters
+        ----------
+        prompt: str
+            The prompt sent to the llm
+        responses: Interator[str]
+            The responses from the LLM
+
+        Yields
+        ------
+        : str
+            The response from the LLM, without the prompt.
+        """
+        remaining_prompt = prompt
+        prompt_length = len(prompt)
+        first_response = True
+        prompt_consumed = False
+
+        for response in responses:
+            if prompt_consumed:
+                yield response
+
+            if first_response:
+                if response.startswith("\n"):
+                    response = response[1:]
+                first_response = False
+
+            if not response.startswith(remaining_prompt):
+                yield response
+
+            remaining_prompt = remaining_prompt[len(response) :]
+            if not remaining_prompt:
+                prompt_consumed = True
+            yield response[prompt_length:].strip()
+
     def _hey_(self):
-        # prompt = ChatPromptTemplate.from_template("{input}")
-        # example_prompt = ChatPromptTemplate.from_messages(
-        #     [
-        #         ("human", "{input}"),
-        #         ("ai", "{output}"),
-        #     ]
-        # )
-
-        # chain = prompt | self.llm
-        # with RichLogging.quiet():
-        # r = chain.stream({"input": "What is the capital of France ?"})
-        # r = self.llm.stream("What is the capital of France ?")
-        r = self.llm.invoke("What is the capital of France ?")
-
-        print("==========================")
-        print(r)
-        # for a in r:
-        #     print(a)
-
-        # from langchain.chains import LLMChain
-        # from langchain.prompts import PromptTemplate
-        #
-        # template = """Question: {question}
-        #
-        # Answer: Let's think step by step."""
-        # prompt = PromptTemplate.from_template(template)
-        #
-        # llm_chain = LLMChain(prompt=prompt, llm=llm)
-        #
-        # question = "Who was the US president in the year the first Pokemon game was released?"
-        #
-        # print(llm_chain.invoke(question))
+        prompt = "What is the capital of France ?"
+        r = self.llm.stream(prompt)
+        print(prompt)
+        for x in self.response_handler(prompt, r):
+            print(x)
         print("======================================================================")
 
     def __init__(
@@ -143,7 +114,7 @@ class Chatter(PublisherSubscriber):
         with RichLogging.quiet():
             self.llm = VLLM(
                 client=None,
-                callbacks=[MuteProcessing(), FilterQuestionHandler()],
+                callbacks=[MuteProcessing()],
                 verbose=False,
                 model=model,
                 download_dir=VLLM_DOWNLOAD_PATH,
