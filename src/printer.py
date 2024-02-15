@@ -23,7 +23,6 @@ from typing import AsyncIterator, Coroutine
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
-from src.libs.rich_logger import RichLogging
 
 from src.models.literals_types_constants import MessageContentType
 from src.models.message_event import MessageEvent
@@ -172,7 +171,6 @@ class Printer(PublisherSubscriber):
                     if isinstance(char, str):
                         self._print_char(char)
                         full_text += char
-        # TODO: Should I clear and render?
         full_text += "\n"
         self._print_char("\n")
 
