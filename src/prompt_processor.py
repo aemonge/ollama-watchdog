@@ -66,7 +66,7 @@ class PromptProcessor(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
-        logging.warning(
+        logging.info(
             f'PromptProcessor listen "{event.event_type}" and is processing prompt'
         )
         if not isinstance(event.contents, str):
@@ -79,6 +79,6 @@ class PromptProcessor(PublisherSubscriber):
             self.author,
             contents=contents,
         )
-        logging.warning('PromptProcessor is sending a "record" event')
-        logging.info(event)
+        logging.info('PromptProcessor is sending a "record" event')
+        logging.debug(event)
         await self.publish(["record"], event)

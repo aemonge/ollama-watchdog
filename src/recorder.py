@@ -6,6 +6,7 @@ from typing import Dict
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages.base import BaseMessage
 
+from src.libs.rich_logger import RichLogging
 from src.models.literals_types_constants import (
     SUMMARIZE_EVERY,
     DatabasePrefixes,
@@ -85,7 +86,7 @@ class Recorder(PublisherSubscriber):
         self.history["unprocessed"].add_message(msg)
 
         if len(self.history["processed"].messages) % SUMMARIZE_EVERY != 0:
-            await self.block(False)
+            RichLogging.unblock()
             return
 
         contents: MessageContentType = [self._last_human_processed_message, msg]
@@ -96,8 +97,8 @@ class Recorder(PublisherSubscriber):
             contents=contents
         )
 
-        logging.warning('Sending a "summarize" event')
-        logging.info(event)
+        logging.info('Recorder is sending a "summarize" event')
+        logging.debug(event)
         await self.publish(["summarize"], event)
 
     async def _human_processed_message(self, event: MessageEvent) -> None:
@@ -122,8 +123,8 @@ class Recorder(PublisherSubscriber):
             contents=contents
         )
 
-        logging.warning('Sending "ask" event')
-        logging.info(event)
+        logging.info('Recorder is sending a "ask" event')
+        logging.debug(event)
         await self.publish(["ask"], event)
 
     async def _human_raw_message(self, event: MessageEvent) -> None:
@@ -138,8 +139,8 @@ class Recorder(PublisherSubscriber):
         msg = self._normalize_base_message(event)
 
         self.history["unprocessed"].add_message(msg)
-        logging.warning('Sending ["print, "chain"] events')
-        logging.info(event)
+        logging.info('Recorder is sending ["print, "chain"] events')
+        logging.debug(event)
         await self.publish(["print", "chain"], event)
 
     async def _chat_summary(self, event: MessageEvent) -> None:
@@ -153,7 +154,7 @@ class Recorder(PublisherSubscriber):
         """
         msg = self._normalize_base_message(event, "ai")
         self.history["processed"].add_message(msg)
-        await self.block(False)
+        RichLogging.unblock()
 
     async def listen(self, event: MessageEvent) -> None:
         """
@@ -164,8 +165,8 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the chunked response.
         """
-        logging.warning(f'Recorder listen to "{event.event_type}" event')
-        logging.info(event)
+        logging.info(f'Recorder listen to "{event.event_type}" event')
+        logging.debug(event)
         if event.contents is None:
             logging.error(
                 "Cant record empty and None event.contents "

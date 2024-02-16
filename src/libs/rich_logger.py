@@ -21,6 +21,10 @@ class RichLogging(RichHandler):
 
     quiet_mode_enabled = False  # Class-level attribute to control quiet mode
 
+    _blocked = True  # Class-level attribute to control quiet mode
+
+    console = Console()
+
     TRACE_LEVEL_NUM: ClassVar[int] = 15
 
     LOG_STYLES: ClassVar[dict[str, str]] = {
@@ -70,6 +74,30 @@ class RichLogging(RichHandler):
                 self.console.rule(
                     title=Text(part, style=style), align="right", style=self.LOG_LINE_BG
                 )
+
+    @classmethod
+    def block(cls) -> None:
+        """Set block to True."""
+        logging.info("Blocking the input read.")
+        cls._blocked = True
+
+    @classmethod
+    def unblock(cls) -> None:
+        """Set block to False."""
+        logging.info("Un Blocked.")
+        cls._blocked = False
+
+    @classmethod
+    def is_blocked(cls) -> bool:
+        """
+        Get _blocked.
+
+        Returns
+        -------
+        : bool
+            _blocked.
+        """
+        return cls._blocked
 
     @classmethod
     def update_quiet_mode(cls, log_level: int) -> None:

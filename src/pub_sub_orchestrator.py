@@ -39,7 +39,7 @@ class PubSubOrchestrator(object):
         self.chatter = Chatter(self.publish, model=model)
         self.prompt_processor = PromptProcessor(self.user, self.publish)
         self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
-        self.summarizer = Summarizer(self.publish, model=model)
+        self.summarizer = Summarizer(self.publish)
         self.watcher = Watcher(
             self.filename,
             self.user,

@@ -7,6 +7,7 @@ from typing import Optional
 from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+from src.libs.rich_logger import RichLogging
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -55,15 +56,13 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         current_content : str
             The content of the file.
         """
+        RichLogging.block()
         self.last_content = current_content
+
         event_data = MessageEvent("human_raw_message", self.user, current_content)
-        logging.warning(f'Changes detected on "{self.filename}"')
-        asyncio.run_coroutine_threadsafe(
-            self.block(True),
-            self.loop,
-        )
-        logging.warning('Sending "record" event')
-        logging.info(event_data)
+        logging.info('Sending "record" event')
+        logging.debug(event_data)
+
         coroutine = self.publish(["record"], event_data)
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 
@@ -81,14 +80,16 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         """
         if not event.src_path.endswith(self.filename):
             return
+
         with open(event.src_path, "r") as file:
             current_content = file.read()
 
         if (
             not self.filter_duplicated_content
             or (self.last_content != current_content)
-            and not self.is_blocked()
+            and not RichLogging.is_blocked()
         ):
+            logging.info(f'Changes detected on "{self.filename}"')
             self._on_modified(current_content)
 
     def start_watching(self) -> Observer:  # type: ignore
@@ -103,4 +104,5 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         observer = Observer()
         observer.schedule(self, ".", recursive=False)
         observer.start()
+        RichLogging.unblock()
         return observer

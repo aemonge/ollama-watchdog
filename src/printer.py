@@ -18,7 +18,7 @@ Todo
 """
 import logging
 import re
-from typing import AsyncIterator, Coroutine, Iterator
+from typing import AsyncGenerator, AsyncIterator, Coroutine, Generator, Iterator
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -139,7 +139,7 @@ class Printer(PublisherSubscriber):
         title = user + Text(" (") + date + Text(")")
         self.console.rule(title=title)
 
-    async def pretty_print(self, text: MessageContentType, author: str) -> None:
+    async def pretty_print(self, text: MessageContentType) -> None:
         """
         Process the text.
 
@@ -147,8 +147,6 @@ class Printer(PublisherSubscriber):
         ----------
         text : MessageContentType
             The text to process
-        author : str
-            The author of the event to publish
 
         Raises
         ------
@@ -165,25 +163,23 @@ class Printer(PublisherSubscriber):
             for char in text:
                 self._print_char(char)
                 full_text += char
-        elif isinstance(text, AsyncIterator):
+        elif isinstance(text, (AsyncIterator, AsyncGenerator)):
             async for chunk in text:
-                for char in chunk.content:  # pyright: ignore
+                _content = getattr(chunk, "content", chunk)
+                for char in _content:
                     if isinstance(char, str):
                         self._print_char(char)
                         full_text += char
-        elif isinstance(text, Iterator):
+        elif isinstance(text, (Iterator, Generator)):
             for chunk in text:
-                for char in chunk.content:  # pyright: ignore
+                _content = getattr(chunk, "content", chunk)
+                for char in _content:
                     if isinstance(char, str):
                         self._print_char(char)
                         full_text += char
 
         full_text += "\n"
         self._print_char("\n")
-
-        event_data = MessageEvent("ai_message", author, full_text)
-        logging.warning('Sending a "record" event')
-        await self.publish(["record"], event_data)
 
     def _print_char(self, char: str) -> None:
         """
@@ -218,8 +214,8 @@ class Printer(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
-        logging.warning(f'Printer listen to "{event.event_type}" event')
-        logging.info(event)
+        logging.info(f'Printer listen to "{event.event_type}" event')
+        logging.debug(event)
         if event.contents is None or event.author is None:
             logging.error("event.contents is None or event.author is None")
             logging.error(event)
@@ -227,6 +223,6 @@ class Printer(PublisherSubscriber):
 
         self.title(event)
         if isinstance(event.contents, Coroutine):
-            await self.pretty_print(await event.contents, event.author)
+            await self.pretty_print(await event.contents)
         else:
-            await self.pretty_print(event.contents, event.author)
+            await self.pretty_print(event.contents)

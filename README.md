@@ -59,7 +59,7 @@ To use `ollama-watchdog`, follow these steps:
 -   Test thoroughly on various Linux distributions.
 
 ## Todo
-
+-   [ ] Put caches: https://python.langchain.com/docs/integrations/llms/llm_caching
 -   [x] Use the payload option `stream: True` to receive the chunks and process them Use
         a custom mdcat with python, to render markdown properly after all blocks are
         sent.
@@ -69,7 +69,7 @@ To use `ollama-watchdog`, follow these steps:
 -   [x] Add support for any endpoint like, perplexity.
 -   [ ] Ability to include all types of files, like images.
 -   [-] On error, display a message from `system` that tells us the error. Make sure
-        https connection errors are being parsed and sent.
+    https connection errors are being parsed and sent.
 -   [-] Omit commented string to prompt `<!-- -->`.
 -   [ ] keep the response linted in markdown, or at least in a max-line-length, so that
         we can remove lines with Tails.

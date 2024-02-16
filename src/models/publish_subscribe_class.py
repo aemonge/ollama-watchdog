@@ -1,6 +1,5 @@
 """Subscriber abstract class."""
 
-import logging
 from abc import abstractmethod
 from typing import Any, Callable, Coroutine, List, Optional
 
@@ -14,29 +13,6 @@ PublisherCallback = Callable[
 
 class PublisherSubscriber:
     """Subscriber abstract class."""
-
-    def is_blocked(self) -> bool:
-        """
-        Get the value of the block property.
-
-        Returns
-        -------
-        : bool
-            The block value
-        """
-        logging.critical("Must define the block property")
-        return False
-
-    async def block(self, value: bool) -> None:
-        """
-        Set the value of the block property.
-
-        Parameters
-        ----------
-        value : bool
-            The value to set.
-        """
-        logging.critical(f"Must define the block method {value}")
 
     @abstractmethod
     def listen(
