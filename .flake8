@@ -11,6 +11,8 @@ no-spaces-allowed = true
 naming-convention = snake_case
 ignore=D101, D102
 require-code = true
+per-file-ignores =
+    *test.py: T201, D100, DC100
 
 restrict_relative_imports = true
 restrict_local_scope_imports = true

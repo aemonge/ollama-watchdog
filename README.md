@@ -59,6 +59,9 @@ To use `ollama-watchdog`, follow these steps:
 -   Test thoroughly on various Linux distributions.
 
 ## Todo
+
+-   [ ] Must use a chat template.
+-   [ ] System manager, for choosing model and templates (modes).
 -   [ ] Put caches: https://python.langchain.com/docs/integrations/llms/llm_caching
 -   [x] Use the payload option `stream: True` to receive the chunks and process them Use
         a custom mdcat with python, to render markdown properly after all blocks are

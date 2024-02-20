@@ -149,21 +149,21 @@ class Chatter(PublisherSubscriber):
 
         vllm_kwargs = {
             "gpu_memory_utilization": 0.95,
-            "max_model_len": 8192,
-            "enforce_eager": True,
+            "max_model_len": 4096,  # 8192,
+            # "enforce_eager": True,
         }
         with RichLogging.quiet():
             self.llm = VLLM(
                 client=None,
                 callbacks=[MuteProcessing()],
-                cache=False,
-                verbose=False,
+                # cache=False,
+                # verbose=False,
                 model=model,
                 download_dir=VLLM_DOWNLOAD_PATH,
                 trust_remote_code=True,  # mandatory for hf models
                 vllm_kwargs=vllm_kwargs,
-                max_new_tokens=128,  # 512
-                top_k=10,
+                # max_new_tokens=128,  # 512
+                top_k=1,
                 top_p=0.95,
                 temperature=0.8,
             )

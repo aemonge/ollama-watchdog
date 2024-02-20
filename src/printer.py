@@ -192,7 +192,6 @@ class Printer(PublisherSubscriber):
         """
         if char == "\n":
             if self.is_multiline_block():
-                self.console.print(" ", end="")
                 self._column -= 1
             else:
                 self.clear_and_render()
@@ -222,7 +221,4 @@ class Printer(PublisherSubscriber):
             return
 
         self.title(event)
-        if isinstance(event.contents, Coroutine):
-            await self.pretty_print(await event.contents)
-        else:
-            await self.pretty_print(event.contents)
+        await self.pretty_print(event.contents)
