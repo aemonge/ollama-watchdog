@@ -18,13 +18,13 @@ Todo
 """
 import logging
 import re
-from typing import AsyncGenerator, AsyncIterator, Coroutine, Generator, Iterator
+from typing import AsyncGenerator, AsyncIterator, Generator, Iterator, cast
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
 
-from src.models.literals_types_constants import MessageContentType
+from src.models.literals_types_constants import ExtendedMessage
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -139,13 +139,13 @@ class Printer(PublisherSubscriber):
         title = user + Text(" (") + date + Text(")")
         self.console.rule(title=title)
 
-    async def pretty_print(self, text: MessageContentType) -> None:
+    async def pretty_print(self, text: ExtendedMessage) -> None:
         """
         Process the text.
 
         Parameters
         ----------
-        text : MessageContentType
+        text : ExtendedMessage
             The text to process
 
         Raises
@@ -216,9 +216,9 @@ class Printer(PublisherSubscriber):
         logging.info(f'Printer listen to "{event.event_type}" event')
         logging.debug(event)
         if event.contents is None or event.author is None:
-            logging.error("event.contents is None or event.author is None")
+            logging.error(f"Event Type mismatch {event=}")
             logging.error(event)
             return
 
         self.title(event)
-        await self.pretty_print(event.contents)
+        await self.pretty_print(cast(ExtendedMessage, event.contents))

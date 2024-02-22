@@ -1,6 +1,7 @@
 """Here we will define the prompt processing."""
 
 import logging
+from typing import cast
 
 from src.libs.ask_webllm import ask_web_llm
 from src.libs.bash_run import bash_run
@@ -8,7 +9,8 @@ from src.libs.file_include import replace_include_tags
 from src.libs.http_include import get_website_content
 from src.libs.remove_comments import remove_comments
 from src.libs.web_search import search_online
-from src.models.message_event import MessageEvent
+from src.models.literals_types_constants import ExtendedMessage
+from src.models.message_event import MessageEvent, PromptMessage
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
@@ -33,15 +35,18 @@ class PromptProcessor(PublisherSubscriber):
         self.author = author
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
-    def _chain_prompt(self, prompt: str) -> str:
+    def process_prompt(self, prompt: ExtendedMessage) -> ExtendedMessage:
         """
-        Process the prompt with several chains, and enhancers.
+        Process the prompt with several chains.
 
-        And then saves it in the DB.
+        Chains
+        ------
+        remove_comments
+            Removes the comments in markdown, to be filter away from the prompt.
 
         Parameters
         ----------
-        prompt : str
+        prompt : ExtendedMessage
             The raw content from the prompt file.
 
         Returns
@@ -49,13 +54,49 @@ class PromptProcessor(PublisherSubscriber):
         : str
             The enhanced and chained prompt
         """
+        prompt = cast(str, prompt)
         prompt = remove_comments(prompt)
-        prompt = get_website_content(prompt)
-        prompt = replace_include_tags(prompt)
-        prompt = search_online(prompt)
-        prompt = bash_run(prompt)
-        prompt = ask_web_llm(prompt)
         return prompt
+
+    def generate_context(self, prompt: ExtendedMessage) -> str:
+        """
+        Process the prompt with several chains, and enhancers to create context.
+
+        Chains
+        ------
+        get_website_content
+            If a link found inside `<-- http.* -->` it will crawl the website,
+            and fetch a summary of the given link as context.
+        replace_include_tags
+            If a file is found insed `<-- file://.* -->` it will get the file context
+            and include them as context.
+        search_online
+            If a search string is found in `<-- search: .* -->` it will ask duduckgo
+            to search and will provide the context of the fist n results
+        bash_run
+            If a command is found in `<-- run: .* -->` it will run the bash command
+            safely, and include the command and results in the context.
+        ask_web_llm
+            If a query is found in `<-- ask:.* -->` it will use the HTTP LLM to
+            ask for query, with perplexity and include the response in the context.
+
+        Parameters
+        ----------
+        prompt : ExtendedMessage
+            The raw content from the prompt file.
+
+        Returns
+        -------
+        : str
+            The context string.
+        """
+        context = cast(str, prompt)
+        context = get_website_content(context)
+        context = replace_include_tags(context)
+        context = search_online(context)
+        context = bash_run(context)
+        context = ask_web_llm(context)
+        return context
 
     async def listen(self, event: MessageEvent) -> None:
         """
@@ -73,12 +114,16 @@ class PromptProcessor(PublisherSubscriber):
             logging.error("not isinstance(event.contents, str)", event.contents)
             return
 
-        contents = self._chain_prompt(event.contents)
-        event = MessageEvent(
-            "human_processed_message",
-            self.author,
-            contents=contents,
-        )
+        prompt = PromptMessage(self.process_prompt(event.contents))
+        prompt.context = self.generate_context(prompt.prompt)
+
+        if isinstance(event.contents, PromptMessage):
+            if hasattr(event.contents, "history"):
+                prompt.history = event.contents.history
+            if hasattr(event.contents, "history_sumarized"):
+                prompt.history_sumarized = event.contents.history_sumarized
+
+        event = MessageEvent("human_processed_message", prompt, self.author)
         logging.info('PromptProcessor is sending a "record" event')
         logging.debug(event)
         await self.publish(["record"], event)

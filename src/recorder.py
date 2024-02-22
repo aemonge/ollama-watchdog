@@ -7,11 +7,7 @@ from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages.base import BaseMessage
 
 from src.libs.rich_logger import RichLogging
-from src.models.literals_types_constants import (
-    SUMMARIZE_EVERY,
-    DatabasePrefixes,
-    MessageContentType,
-)
+from src.models.literals_types_constants import SUMMARIZE_EVERY, DatabasePrefixes
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
@@ -46,7 +42,7 @@ class Recorder(PublisherSubscriber):
             "processed": SQLChatMessageHistory(
                 session_id=f"processed-{session_id}",
                 connection_string=connection_string,
-            )
+            ),
         }
 
     def _normalize_base_message(
@@ -72,6 +68,25 @@ class Recorder(PublisherSubscriber):
             return BaseMessage(type=msg_type, content=str(msg))
         return msg
 
+    async def _summarize(self, event: MessageEvent) -> None:
+        """
+        Trigger the summarize event.
+
+        Parameters
+        ----------
+        event : MessageEvent
+            The event containing the message.
+        """
+        contents = iter(
+            [self._last_human_processed_message, event.contents]
+            + self.history["processed"].messages[-SUMMARIZE_EVERY:]
+        )
+        event = MessageEvent("chat_summary", contents, event.author)
+
+        logging.info('Recorder is sending a "summarize" event')
+        logging.debug(event)
+        await self.publish(["summarize"], event)
+
     async def _ai_message(self, event: MessageEvent) -> None:
         """
         Process the AI message.
@@ -80,26 +95,19 @@ class Recorder(PublisherSubscriber):
         ----------
         event : MessageEvent
             The event containing the message.
+
+        Returns
+        -------
+        None
         """
         msg = self._normalize_base_message(event, "ai")
         self.history["processed"].add_message(msg)
         self.history["unprocessed"].add_message(msg)
 
-        if len(self.history["processed"].messages) % SUMMARIZE_EVERY != 0:
-            RichLogging.unblock()
-            return
+        if len(self.history["processed"].messages) % SUMMARIZE_EVERY == 0:
+            return await self._summarize(event)
 
-        contents: MessageContentType = [self._last_human_processed_message, msg]
-        contents += self.history["processed"].messages[-SUMMARIZE_EVERY:]
-        event = MessageEvent(
-            "chat_summary",
-            event.author,
-            contents=contents
-        )
-
-        logging.info('Recorder is sending a "summarize" event')
-        logging.debug(event)
-        await self.publish(["summarize"], event)
+        RichLogging.unblock()
 
     async def _human_processed_message(self, event: MessageEvent) -> None:
         """
@@ -115,13 +123,8 @@ class Recorder(PublisherSubscriber):
         self._last_human_processed_message = msg
         self.history["processed"].add_message(msg)
 
-        contents: MessageContentType
-        contents = self.history["processed"].messages[-SUMMARIZE_EVERY:]
-        event = MessageEvent(
-            "chat",
-            event.author,
-            contents=contents
-        )
+        contents = iter(self.history["processed"].messages[-SUMMARIZE_EVERY:])
+        event = MessageEvent("chat", contents, event.author)
 
         logging.info('Recorder is sending a "ask" event')
         logging.debug(event)
@@ -173,12 +176,19 @@ class Recorder(PublisherSubscriber):
                 + f"in {self.__class__.__name__}"
             )
 
-        match event.event_type:
-            case "ai_message":
-                await self._ai_message(event)
-            case "chat_summary":
-                await self._chat_summary(event)
-            case "human_processed_message":
-                await self._human_processed_message(event)
-            case "human_raw_message":
-                await self._human_raw_message(event)
+        # Using if / elif instead of match since black complains....
+        event_type = event.event_type
+        if event_type == "ai_message":
+            await self._ai_message(event)
+
+        elif event_type == "chat_summary":
+            await self._chat_summary(event)
+
+        elif event_type == "human_processed_message":
+            await self._human_processed_message(event)
+
+        elif event_type == "human_raw_message":
+            await self._human_raw_message(event)
+
+        else:
+            logging.error(f"No event type handler for {event_type=}")

@@ -20,7 +20,11 @@ from twisted.internet import reactor  # noqa: E402
 
 @click.command()
 @click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
-@click.option("--model", default="mock", help="Model to use.")
+@click.option(
+    "--model",
+    default="TheBloke/laser-dolphin-mixtral-2x7b-dpo-AWQ",
+    help="Model to use.",
+)
 @click.option(
     "--log-level",
     type=click.Choice(
@@ -30,7 +34,7 @@ from twisted.internet import reactor  # noqa: E402
     default="WARNING",
     help="choose a debug level",
 )
-@click.option("--cuda-device-id", type=int, help="choose a debug level")
+@click.option("--cuda-device-id", default=0, type=int, help="choose a debug level")
 def run(
     prompt_file: str,
     model: str,

@@ -25,17 +25,18 @@ Rules
 -----
 
     {% if context -%}
-    - Avoid referring directly to the context, it should only be used as a knowledge
+    - **Context**: Avoid referring directly to the context, it should only be used as a knowledge
       base. Keeping the knowledge from references as subtle as posible.
-    - Otherwise, if the information of the context will be explicitly referred in the
+    - **Context**: Otherwise, if the information of the context will be explicitly referred in the
       answer, you must provide references in a "References" section.
     {% endif %}
     {%- if history -%}
-    - Avoid repeating anything said in the conversation history.
+    - **History**: Avoid repeating anything said in the conversation history.
+    - **History**: Use the history as your main source of memory.
     {%- endif %}
-    - Text: The format of the text should be Markdown.
-    - Text: Each line should not be bigger than 80 characters.
-    - Syntax: The string `--- [//] # ("role")` indicates the end of a previous message and
+    - **Text**: The format of the text should be **Markdown**.
+    - **Text**: Each line should not be bigger than `88` characters.
+    - **Syntax**: The string `--- [//] # ("role")` indicates the end of a previous message and
       the beginning of a new message from "role".
     {%- if rules -%}{% for rule in rules %}
     - {{rule}}{% endfor %}
@@ -48,7 +49,7 @@ Rules
 Context
 -------
 
-{{ context | wordwrap(80, break_long_words=False) | indent(4, true) }}
+{{ context | wordwrap(84, break_long_words=False) | indent(4, true) }}
 {%- endif -%}
 
 {% if examples %}
@@ -58,20 +59,25 @@ Context
 Examples
 --------
 {% for example in examples %}
-{{ example | wordwrap(80, break_long_words=False) | indent(4, true) }}
+{{ example | wordwrap(84, break_long_words=False) | indent(4, true) }}
 {%- endfor -%}
 {%- endif -%}
 
-{% if history %}
+{% if history or history_sumarized %}
 {# Forcing a tripple line break #}
 
 
 Conversation History
 --------------------
+{%- if history_sumarized -%}
+
+{{ history_sumarized | wordwrap(88, break_long_words=False) }}
+
+{%- endif -%}
 {% for message in history %}
     --- [//] # ("{{message.role}}")
 
-{{ message.content | wordwrap(80, break_long_words=False) | indent(4, true) }}
+{{ message.content | wordwrap(84, break_long_words=False) | indent(4, true) }}
 
 {% endfor %}
 {%- endif -%}
@@ -83,7 +89,7 @@ Local User Question
 
     --- [//] # ("local-user")
 
-{{ query | wordwrap(80, break_long_words=False) | indent(4, true) }}
+{{ query | wordwrap(84, break_long_words=False) | indent(4, true) }}
 
 
 {# Forcing a tripple line break #}

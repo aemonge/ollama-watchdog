@@ -1,6 +1,7 @@
 import pathlib
 from typing import List
 import textwrap
+from jinja2 import Environment, PackageLoader, select_autoescape
 
 from langchain.prompts import PromptTemplate
 from langchain_community.llms.vllm import VLLM
@@ -224,9 +225,29 @@ def test_prompt_template_with_history_and_context(
     print("\n".join([SEP] * 3), end="")
 
 
+def test_paths_template(
+    model: str = "TheBloke/laser-dolphin-mixtral-2x7b-dpo-AWQ",
+) -> None:
+    env = Environment(
+        loader=PackageLoader("ollama-watchdog", "src/prompt_templates"),
+        autoescape=select_autoescape(["jinja"]),
+    )
+    template = env.get_template("chat.jinja")
+    prompt = PromptTemplate.from_template(
+        template=template, template_format="jinja2"
+    )
+
+    # ---- First
+    query = "Hi, my name is Sugarito"
+    rendered_prompt = prompt.format(query=query)
+    print(rendered_prompt)
+
+
 # test_prompt_template_llmless()
 # test_prompt_template()
 # test_prompt_template_with_history(disable_llm=True)
 # test_prompt_template_with_history_and_context(disable_llm=True)
-test_prompt_template_with_history_and_context()
+# test_prompt_template_with_history_and_context()
+# test_paths_template()
 # test_raw()  # noqa: E800
+

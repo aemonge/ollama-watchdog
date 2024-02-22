@@ -2,8 +2,10 @@
 
 import asyncio
 import logging
+import pathlib
 from typing import AsyncIterator, Callable, List, Optional, Union, cast
 
+from langchain.prompts import PromptTemplate
 from langchain_community.llms.vllm import VLLM
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.language_models.base import LanguageModelInput
@@ -12,8 +14,8 @@ from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
 from src.libs.rich_logger import RichLogging
-from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH, MessageContentType
-from src.models.message_event import MessageEvent
+from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH
+from src.models.message_event import MessageEvent, PromptMessage
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
@@ -37,13 +39,13 @@ class MuteProcessing(BaseCallbackHandler):
 class Chatter(PublisherSubscriber):
     """The main chat interface."""
 
-    def _prompt_handler(self, prompts: MessageContentType) -> LanguageModelInput:
+    def _prompt_handler(self, prompts: PromptMessage) -> LanguageModelInput:
         """
         Handle the prompts sent to the LLM.
 
         Parameters
         ----------
-        prompts : MessageContentType
+        prompts : PromptMessage
             The prompts sent to the llm
 
         Raises
@@ -57,14 +59,17 @@ class Chatter(PublisherSubscriber):
             The prompts sent to the LLM
         """
         if isinstance(prompts, list) and isinstance(prompts[0], BaseMessage):
-            return cast(LanguageModelInput, prompts)
+            prompt = PromptTemplate.from_template(
+                template=self.template, template_format="jinja2"
+            )
+            return prompt.format(query=prompts[0])
 
         _msg = f"Chatter detected that prompts are not well typed: {type(prompts):=}"
         logging.error(_msg)
         raise ValueError(_msg)
 
     async def _response_handler(
-        self, prompts: MessageContentType, responses: AsyncIterator[str]
+        self, prompts: PromptMessage, responses: AsyncIterator[str]
     ) -> AsyncIterator[BaseMessageChunk]:
         """
         Handle the response from the LLM, by removing the prompt from the answer.
@@ -83,7 +88,7 @@ class Chatter(PublisherSubscriber):
 
         Parameters
         ----------
-        prompts: MessageContentType
+        prompts: PromptMessage
             The prompts sent to the llm
         responses: Interator[str]
             The responses from the LLM
@@ -118,6 +123,12 @@ class Chatter(PublisherSubscriber):
                     type="ai", content=response[prompt_length:].strip()
                 )
 
+    def _set_template(self) -> None:
+        """Set the template for the prompt."""
+        package_dir = pathlib.Path(__file__).parent
+        template_path = package_dir / "prompt_templates" / "chat.jinja"
+        self.template = template_path.read_text()
+
     def __init__(
         self,
         publish: PublisherCallback,
@@ -149,25 +160,18 @@ class Chatter(PublisherSubscriber):
 
         vllm_kwargs = {
             "gpu_memory_utilization": 0.95,
-            "max_model_len": 4096,  # 8192,
-            # "enforce_eager": True,
         }
         with RichLogging.quiet():
             self.llm = VLLM(
                 client=None,
                 callbacks=[MuteProcessing()],
-                # cache=False,
-                # verbose=False,
                 model=model,
                 download_dir=VLLM_DOWNLOAD_PATH,
                 trust_remote_code=True,  # mandatory for hf models
                 vllm_kwargs=vllm_kwargs,
-                # max_new_tokens=128,  # 512
-                top_k=1,
-                top_p=0.95,
-                temperature=0.8,
             )
 
+        self._set_template()
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
 
     async def _mock_astream(self) -> AsyncIterator[BaseMessageChunk]:
@@ -221,10 +225,8 @@ class Chatter(PublisherSubscriber):
         event : MessageEvent
             The event to process.
         """
-        if not isinstance(event.contents, list) or not isinstance(
-            event.contents[0], BaseMessage
-        ):
-            msg = f'Type "List[BaseMessage|str]" in {self.__class__.__name__} '
+        if not isinstance(event.contents, PromptMessage):
+            msg = f'Type "PromptMessage" in {self.__class__.__name__} '
             msg += f"expected: {event.contents}"
             logging.error(msg)
             return
@@ -233,16 +235,18 @@ class Chatter(PublisherSubscriber):
         if self.model == "mock":
             response = self._mock_astream()
         elif self.prompt_handler:
-            response = self.llm.astream(self.prompt_handler(event.contents))
+            response = self.llm.astream(
+                self.prompt_handler(cast(PromptMessage, event.contents))
+            )
         else:
-            response = self.llm.astream(event.contents)
+            response = self.llm.astream(cast(str, event.contents))
 
         if hasattr(self, "response_handler") and self.response_handler is not None:
             response = self.response_handler(
-                event.contents, cast(AsyncIterator[str], response)
+                cast(PromptMessage, event.contents), cast(AsyncIterator[str], response)
             )
 
-        event = MessageEvent("ai_message", self.model, contents=response)
+        event = MessageEvent("ai_message", response, self.model)
         logging.info('Chatter is sending ["print", "record"] events')
         logging.debug(event)
         await self.publish(["print", "record"], event)
