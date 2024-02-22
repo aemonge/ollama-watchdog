@@ -1,49 +1,49 @@
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 What's the capital of my country?
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 Where do you live? Or what do you mean by "my country"?
 
 
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 I live in Spain.
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 In that case, the capital of your country (*Spain*) is **Madrid**.
 
 
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 What's the capital of France?
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 It's **Paris**.
 
 
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 What's the capital of Mexico?
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 It's **Mexico City**.
 
 
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 What's the capital of East Korea?
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 East Korea is not a country that I know of and according to Search: "does east
 korea exist" it is a region of North Korea, but not a country by itself.
@@ -53,7 +53,7 @@ References
 - [Search: "does east korea exist"](https://duckduckgo.com/?q=does+east+korea+exist)
 
 
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 Search for errors or a performance boost in this code:
 ```javascript
@@ -61,7 +61,7 @@ Search for errors or a performance boost in this code:
 ```
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 The code snippet you've provided is attempting to use a mix of JavaScript syntaxes
 but contains several errors and does not adhere to standard JavaScript conventions.
@@ -111,11 +111,11 @@ comprehensions for efficient looping or using dictionaries
 (similar to JavaScript objects) for fast lookups.
 
 
---- [//] # ("user")
+--- [//] # ("aemonge")
 
 Thanks!
 
 
---- [//] # ("local-ai")
+--- [//] # ("TheBloke/....")
 
 You're welcome 😉

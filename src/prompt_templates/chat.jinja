@@ -16,7 +16,8 @@ The other main participant in the conversation is "{{username}}", which is a
 {{ userinfo | wordwrap(88, break_long_words=False) }}.
 
 Adhere to the rules of the conversation and use the examples to clarify the rules that you
-don't understand. If the information available is insufficient to answer the question,
+don't understand, but make sure that you respect the rules even if the examples provided
+contradict some of them. If the information available is insufficient to answer the question,
 ask for the information you would need or respond with "I don't know".
 
 {# Forcing a tripple line break #}
@@ -34,10 +35,11 @@ Rules
     - **History**: Avoid repeating anything said in the conversation history.
     - **History**: Use the history as your main source of memory.
     {%- endif %}
-    - **Text**: The format of the text should be **Markdown**.
-    - **Text**: Each line should not be bigger than `88` characters.
-    - **Syntax**: The string `--- [//] # ("role")` indicates the end of a previous message and
-      the beginning of a new message from "role".
+    - **Text**: Prefer a Markdown Syntax instead of Rich text to respond and interpret the questions.
+    - **Text**: Do not triple back-ticks ("```") directly to answer without enclosing in any format.
+      Only use them to enclose code examples.
+    - **Syntax**: The string `--- [//] # ("name")` indicates the end of a previous message and
+      the beginning of a new message from "name".
     {%- if rules -%}{% for rule in rules %}
     - {{rule}}{% endfor %}
     {%- endif %}
@@ -97,4 +99,3 @@ Answer
 ------
 
     --- [//] # ("{{botname}}")
-{{ '    ' }}
