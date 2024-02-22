@@ -39,36 +39,40 @@ class MuteProcessing(BaseCallbackHandler):
 class Chatter(PublisherSubscriber):
     """The main chat interface."""
 
-    def _prompt_handler(self, prompts: PromptMessage) -> LanguageModelInput:
+    def apply_prompt_template(self, prompt: PromptMessage) -> LanguageModelInput:
         """
         Handle the prompts sent to the LLM.
 
         Parameters
         ----------
-        prompts : PromptMessage
+        prompt : PromptMessage
             The prompts sent to the llm
-
-        Raises
-        ------
-        ValueError
-            Prompts are not well typed
 
         Returns
         -------
         : LanguageModelInput
             The prompts sent to the LLM
         """
-        if isinstance(prompts, list) and isinstance(prompts[0], BaseMessage):
-            prompt = PromptTemplate.from_template(
-                template=self.template, template_format="jinja2"
-            )
-            return prompt.format(query=prompts[0])
+        logging.info(
+            f'Using the "{self.template.name=}" prompt template with: \n'
+            + f"{self.model=}, {self.username=}, and {self.userinfo.name=}"
+        )
+        prompt_template = PromptTemplate.from_template(
+            template=self.template_content, template_format="jinja2"
+        )
 
-        _msg = f"Chatter detected that prompts are not well typed: {type(prompts):=}"
-        logging.error(_msg)
-        raise ValueError(_msg)
+        return prompt_template.format(
+            username=self.username,
+            userinfo=self.userinfo_content,
+            botname=self.model,
+            query=prompt.prompt,
+            context=prompt.context,
+            examples=prompt.examples,
+            history=prompt.history,
+            history_sumarized=prompt.history_sumarized,
+        )
 
-    async def _response_handler(
+    async def remove_prompt_from_response(
         self, prompts: PromptMessage, responses: AsyncIterator[str]
     ) -> AsyncIterator[BaseMessageChunk]:
         """
@@ -126,13 +130,16 @@ class Chatter(PublisherSubscriber):
     def _set_template(self) -> None:
         """Set the template for the prompt."""
         package_dir = pathlib.Path(__file__).parent
-        template_path = package_dir / "prompt_templates" / "chat.jinja"
-        self.template = template_path.read_text()
+        self.template = package_dir / "prompt_templates" / "chat.jinja"
+        self.userinfo = package_dir / "prompt_templates" / "userinfo.txt"
+        self.template_content = self.template.read_text()
+        self.userinfo_content = self.userinfo.read_text()
 
     def __init__(
         self,
         publish: PublisherCallback,
         model: str = "mock",
+        username: Optional[str] = None,
         response_handler: Optional[Callable] = None,
         prompt_handler: Optional[Callable] = None,
     ) -> None:
@@ -145,17 +152,18 @@ class Chatter(PublisherSubscriber):
             publish a new event to parent
         model : str
             The model to use for the LLM.
+        username : optional, str
+            The name of the user
         response_handler: Callable, Optional
             The handling of the response
         prompt_handler: Callable, Optional
             The handling of the prompts
         """
         self.model = model
+        self.username = username or "local-user"
+        self.response_handler = response_handler  # no default response_handler
         self.prompt_handler = (
-            self._prompt_handler if prompt_handler is None else prompt_handler
-        )
-        self.response_handler = (
-            self._response_handler if response_handler is None else response_handler
+            self.apply_prompt_template if prompt_handler is None else prompt_handler
         )
 
         vllm_kwargs = {
@@ -227,26 +235,28 @@ class Chatter(PublisherSubscriber):
         """
         if not isinstance(event.contents, PromptMessage):
             msg = f'Type "PromptMessage" in {self.__class__.__name__} '
-            msg += f"expected: {event.contents}"
+            msg += f"expected in event.content: {event=}"
             logging.error(msg)
             return
 
-        logging.info(f'Chatting with "{self.model}"')
+        logging.info(f'{self.__class__.__name__} will "ask" "{self.model}"')
         if self.model == "mock":
             response = self._mock_astream()
-        elif self.prompt_handler:
-            response = self.llm.astream(
-                self.prompt_handler(cast(PromptMessage, event.contents))
-            )
         else:
-            response = self.llm.astream(cast(str, event.contents))
+            prompt = (
+                self.prompt_handler(event.contents)
+                if self.prompt_handler
+                else cast(str, event.contents)
+            )
+            response = self.llm.astream(prompt)
 
+        logging.info(f"{self.__class__.__name__} is handling the response.")
         if hasattr(self, "response_handler") and self.response_handler is not None:
             response = self.response_handler(
                 cast(PromptMessage, event.contents), cast(AsyncIterator[str], response)
             )
 
         event = MessageEvent("ai_message", response, self.model)
-        logging.info('Chatter is sending ["print", "record"] events')
+        logging.info(f'{self.__class__.__name__} is sending ["print", "record"] events')
         logging.debug(event)
         await self.publish(["print", "record"], event)

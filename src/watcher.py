@@ -59,7 +59,7 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         RichLogging.block()
         self.last_content = current_content
 
-        event_data = MessageEvent("human_raw_message", self.user, current_content)
+        event_data = MessageEvent("human_raw_message", current_content, self.user)
         logging.info('Sending "record" event')
         logging.debug(event_data)
 

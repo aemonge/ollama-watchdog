@@ -1,14 +1,18 @@
 """Record the conversation between AI and Human in a SQLite DB."""
 
 import logging
-from typing import Dict
+from typing import AsyncIterator, Dict, Iterator, List, cast
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages.base import BaseMessage
 
 from src.libs.rich_logger import RichLogging
-from src.models.literals_types_constants import SUMMARIZE_EVERY, DatabasePrefixes
-from src.models.message_event import MessageEvent
+from src.models.literals_types_constants import (
+    SUMMARIZE_EVERY,
+    DatabasePrefixes,
+    ExtendedMessage,
+)
+from src.models.message_event import MessageEvent, PromptMessage
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
 
 
@@ -45,17 +49,17 @@ class Recorder(PublisherSubscriber):
             ),
         }
 
-    def _normalize_base_message(
-        self, event: MessageEvent, msg_type: str = "human"
-    ) -> BaseMessage:
+    async def _normalize_message(
+        self, content: ExtendedMessage, type: str = "human"  # noqa: A002
+    ) -> BaseMessage | None:
         """
         Normalize the message to a BaseMessage.
 
         Parameters
         ----------
-        event : MessageEvent
-            The event containing the message.
-        msg_type : str
+        content : ExtendedMessage
+            The message it self.
+        type : str
             The type of message. Defaults to "human".
 
         Returns
@@ -63,10 +67,24 @@ class Recorder(PublisherSubscriber):
         BaseMessage
             The normalized message.
         """
-        msg = event.contents
-        if not isinstance(msg, BaseMessage):
-            return BaseMessage(type=msg_type, content=str(msg))
-        return msg
+        if isinstance(content, BaseMessage):
+            return content
+
+        if isinstance(content, str):
+            return BaseMessage(content, type=type)
+
+        if isinstance(content, Iterator):
+            return BaseMessage("".join(str(part) for part in content), type=type)
+
+        if isinstance(content, AsyncIterator):
+            parts = []
+            async for part in content:
+                parts.append(str(part))
+            return BaseMessage("".join(parts), type=type)
+        else:
+            logging.error(
+                f"{self.__class__.__name__}: Unsupported message type {content=}"
+            )
 
     async def _summarize(self, event: MessageEvent) -> None:
         """
@@ -100,10 +118,21 @@ class Recorder(PublisherSubscriber):
         -------
         None
         """
-        msg = self._normalize_base_message(event, "ai")
+        if isinstance(event.contents, PromptMessage):
+            logging.error(
+                f'{self.__class__.__name__}: Expected "event.contents"'
+                + f'to be a "PromptMessage": {event=}'
+            )
+
+        if not (
+            msg := await self._normalize_message(
+                cast(ExtendedMessage, event.contents), type="ai"
+            )
+        ):
+            return
+
         self.history["processed"].add_message(msg)
         self.history["unprocessed"].add_message(msg)
-
         if len(self.history["processed"].messages) % SUMMARIZE_EVERY == 0:
             return await self._summarize(event)
 
@@ -118,13 +147,24 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the message.
         """
-        msg = self._normalize_base_message(event)
+        if not (
+            msg := await self._normalize_message(
+                cast(PromptMessage, event.contents).prompt, type="ai"
+            )
+        ):
+            return
+
+        event = MessageEvent(
+            "chat",
+            PromptMessage(
+                cast(str, msg.content),
+                history=list(self.history["processed"].messages[-SUMMARIZE_EVERY:]),
+            ),
+            event.author,
+        )
 
         self._last_human_processed_message = msg
         self.history["processed"].add_message(msg)
-
-        contents = iter(self.history["processed"].messages[-SUMMARIZE_EVERY:])
-        event = MessageEvent("chat", contents, event.author)
 
         logging.info('Recorder is sending a "ask" event')
         logging.debug(event)
@@ -139,9 +179,11 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the message.
         """
-        msg = self._normalize_base_message(event)
+        if msg := await self._normalize_message(
+            cast(ExtendedMessage, event.contents), type="ai"
+        ):
+            self.history["unprocessed"].add_message(msg)
 
-        self.history["unprocessed"].add_message(msg)
         logging.info('Recorder is sending ["print, "chain"] events')
         logging.debug(event)
         await self.publish(["print", "chain"], event)
@@ -155,8 +197,11 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the message.
         """
-        msg = self._normalize_base_message(event, "ai")
-        self.history["processed"].add_message(msg)
+        if msg := await self._normalize_message(
+            cast(ExtendedMessage, event.contents), type="ai"
+        ):
+            self.history["processed"].add_message(msg)
+
         RichLogging.unblock()
 
     async def listen(self, event: MessageEvent) -> None:

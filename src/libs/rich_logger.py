@@ -66,8 +66,8 @@ class RichLogging(RichHandler):
             style: str = self.LOG_STYLES.get(record.levelname, "")
 
             parts: List[str] = [
-                _msg[i : i + self.console.width]
-                for i in range(0, len(_msg), self.console.width)
+                _msg[i : i + self.console_width]
+                for i in range(0, len(_msg), self.console_width)
             ]
 
             for part in parts:
@@ -75,16 +75,28 @@ class RichLogging(RichHandler):
                     title=Text(part, style=style), align="right", style=self.LOG_LINE_BG
                 )
 
+    @property
+    def console_width(self) -> int:
+        """
+        Get the console with, plus elipsis chars.
+
+        Returns
+        -------
+        : int
+            The console width plus elipsis.
+        """
+        return self.console.width - 2
+
     @classmethod
     def block(cls) -> None:
         """Set block to True."""
-        logging.info("Blocking the input read.")
+        logging.info("Blocking the input read")
         cls._blocked = True
 
     @classmethod
     def unblock(cls) -> None:
         """Set block to False."""
-        logging.info("Un Blocked.")
+        logging.info("Un Blocked")
         cls._blocked = False
 
     @classmethod
