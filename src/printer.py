@@ -62,6 +62,7 @@ class Printer(PublisherSubscriber):
         self._column = self.console.width
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self._spin_char_len = len(self.spinner[0])
+        self._multiline_block = False
 
     def _print_spinner(self) -> None:
         """Print a loading spinner."""
@@ -80,9 +81,11 @@ class Printer(PublisherSubscriber):
         if not self._buffer:
             return
 
-        print("\r" + " " * (self.console.width - 1), end="\r")  # noqa: T201
+        print("\r" + " " * self.console.width, end="\r")  # noqa: T201
         md = Markdown(self._buffer, code_theme="native", justify="left")
-        self.console.print(md)
+        self.console.print(
+            md, no_wrap=True, emoji=True, markup=True, highlight=True
+        )
         self._buffer = ""
         self._column = self.console.width
 
@@ -96,16 +99,29 @@ class Printer(PublisherSubscriber):
         2. Unordered List
         3. Table (missing)
         4. Code Block
+        5. Quote (missing)
 
         Returns
         -------
         : bool
             If it IS a multi-line block.
         """
-        code_starts = re.compile(r"^\n?```", re.MULTILINE | re.DOTALL)
-        code_ends = re.compile(r"```.?$", re.MULTILINE | re.DOTALL)
-        if code_starts.search(self._buffer):
-            return not code_ends.search(self._buffer)
+        if self._multiline_block:
+            return True
+
+        quote_starts = re.compile(r"^\s{4,}", re.MULTILINE | re.DOTALL)
+        quote_ends = re.compile(r"^[^\s{4,}]", re.MULTILINE | re.DOTALL)
+        if quote_starts.search(self._buffer):
+            return not quote_ends.search(self._buffer)
+
+        code_starts = re.compile(r"^\n?\s*```\w*$", re.MULTILINE | re.DOTALL)
+        code_ends = re.compile(r"\n```$", re.MULTILINE | re.DOTALL)
+        if not self._multiline_block and code_starts.search(self._buffer):
+            self._multiline_block = True
+            return True
+        elif self._multiline_block and code_ends.search(self._buffer):
+            self._multiline_block = False
+            return False
 
         if re.compile(r"\n{2}", re.MULTILINE | re.DOTALL).search(self._buffer):
             return False  # Quickly escape if triple \n is found not in code though
@@ -178,8 +194,7 @@ class Printer(PublisherSubscriber):
                         self._print_char(char)
                         full_text += char
 
-        full_text += "\n"
-        self._print_char("\n")
+        self.clear_and_render()
 
     def _print_char(self, char: str) -> None:
         """

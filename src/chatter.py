@@ -140,6 +140,7 @@ class Chatter(PublisherSubscriber):
         publish: PublisherCallback,
         model: str = "mock",
         username: Optional[str] = None,
+        enable_stream: bool = False,
         response_handler: Optional[Callable] = None,
         prompt_handler: Optional[Callable] = None,
     ) -> None:
@@ -154,12 +155,15 @@ class Chatter(PublisherSubscriber):
             The model to use for the LLM.
         username : optional, str
             The name of the user
+        enable_stream: bool
+            Should the LLM stream the response
         response_handler: Callable, Optional
             The handling of the response
         prompt_handler: Callable, Optional
             The handling of the prompts
         """
         self.model = model
+        self.enable_stream = enable_stream
         self.username = username or "local-user"
         self.response_handler = response_handler  # no default response_handler
         self.prompt_handler = (
@@ -248,7 +252,10 @@ class Chatter(PublisherSubscriber):
                 if self.prompt_handler
                 else cast(str, event.contents)
             )
-            response = self.llm.astream(prompt)
+            if self.enable_stream:
+                response = self.llm.astream(prompt)
+            else:
+                response = self.llm.invoke(prompt)
 
         logging.info(f"{self.__class__.__name__} is handling the response.")
         if hasattr(self, "response_handler") and self.response_handler is not None:

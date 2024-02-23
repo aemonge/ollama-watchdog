@@ -20,7 +20,7 @@ from src.watcher import Watcher
 class PubSubOrchestrator(object):
     """Manages subscribers and publishes messages."""
 
-    def __init__(self, prompt_file: str, model: str) -> None:
+    def __init__(self, prompt_file: str, model: str, enable_stream: bool) -> None:
         """
         Initialize the PubSubOrchestrator.
 
@@ -30,13 +30,17 @@ class PubSubOrchestrator(object):
             The file to watch.
         model : str
             The LLM model to use.
+        enable_stream: bool
+            Should the LLM stream the response
         """
         self.filename = prompt_file
         self.user = str(os.getenv("USER"))
 
         self.printer = Printer(self.publish)
 
-        self.chatter = Chatter(self.publish, model=model, username=self.user)
+        self.chatter = Chatter(
+            self.publish, model=model, username=self.user, enable_stream=enable_stream
+        )
         self.prompt_processor = PromptProcessor(self.user, self.publish)
         self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
         self.summarizer = Summarizer(self.publish)
