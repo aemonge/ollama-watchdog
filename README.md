@@ -60,18 +60,19 @@ To use `ollama-watchdog`, follow these steps:
 
 ## Todo
 
--   [ ] Must use a chat template.
+-   [ ] Fix the summarizer.
+-   [x] Must use a chat template.
 -   [ ] System manager, for choosing model and templates (modes).
 -   [ ] Put caches: https://python.langchain.com/docs/integrations/llms/llm_caching
 -   [x] Use the payload option `stream: True` to receive the chunks and process them Use
         a custom mdcat with python, to render markdown properly after all blocks are
         sent.
--   [ ] Analyze [prompt-engine-py](https://github.com/microsoft/prompt-engine-py) and
+-   [x] Analyze [prompt-engine-py](https://github.com/microsoft/prompt-engine-py) and
         apply useful ideas.
 -   [x] Apply chunks responses to the Ollama.
 -   [x] Add support for any endpoint like, perplexity.
 -   [ ] Ability to include all types of files, like images.
--   [-] On error, display a message from `system` that tells us the error. Make sure
+-   [x] On error, display a message from `system` that tells us the error. Make sure
     https connection errors are being parsed and sent.
 -   [-] Omit commented string to prompt `<!-- -->`.
 -   [ ] keep the response linted in markdown, or at least in a max-line-length, so that
@@ -88,7 +89,7 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Allow multi string commands, specially useful for `ask`
 -   [ ] Use only GPU, and raise an error if the GPU isn't been used. This should be a
         configuration.
--   [ ] On the markdown tail, fix the \`\`\` single with no language marks view
+-   [x] On the markdown tail, fix the \`\`\` single with no language marks view
 -   [ ] Allow control with special syntax to change the LLM parameters, and SQLite
         session. The idea would be to have a system bot, that can change the main
         threads conversations, drop in and out some actors. Like an director, that
@@ -102,10 +103,9 @@ To use `ollama-watchdog`, follow these steps:
             5. change the model
 
 -   [ ] (printer) Stop the buffer on <EOF> or <EOB> block end signals
--   [ ] (printer) Fix issue with block code with no language.
+-   [x] (printer) Fix issue with block code with no language.
 -   [x] Detect and avoid the infinite loop.
 -   [ ] Implement a simple "working" event that prints a loading spinner in the middle
--   [ ] Use diffrenet models, for diffrenet tasks. Staring by the summarization
 -   [ ] Move all event triggers and listeners to the orchestrator, to centralize the
         communication and provide a way to log messages pathways.
 
