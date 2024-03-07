@@ -24,12 +24,10 @@ def remove_comments(content: str) -> str:
         The content without comments
     """
     comment_regex = r"<!--(?:.*?)-->"
-    content_list = content.split("\n")
+    result = []
+    for line in content:
+        _line = line.strip()
+        if _line and not re.search(comment_regex, _line):
+            result.append(_line)
 
-    content_filtered = [
-        line
-        for line in content_list
-        if line != "" and not re.search(comment_regex, line)
-    ]
-
-    return "\n".join(content_filtered)
+    return "\n".join(result)

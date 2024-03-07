@@ -22,8 +22,15 @@ from twisted.internet import reactor  # noqa: E402
 @click.argument("prompt_file", default="input.md", type=click.Path(exists=True))
 @click.option(
     "--model",
-    default="TheBloke/laser-dolphin-mixtral-2x7b-dpo-AWQ",
-    help="Model to use.",
+    default="TheBloke/CodeBooga-34B-v0.1-AWQ",
+    help="Model to use. Examples: "
+    + ",".join(
+        [
+            "TheBloke/CodeBooga-34B-v0.1-AWQ",
+            "TheBloke/laser-dolphin-mixtral-2x7b-dpo-AWQ",
+            "mosaicml/mpt-7b",
+        ]
+    ),
 )
 @click.option(
     "--log-level",
@@ -36,19 +43,22 @@ from twisted.internet import reactor  # noqa: E402
 )
 @click.option("--cuda-device-id", default=0, type=int, help="choose a debug level")
 @click.option(
-    "--stream",
+    "--no-stream",
     is_flag=True,
     show_default=True,
     default=False,
     type=bool,
-    help="enable streaming the output. Best if not, but ok if you have a slow connection.",
+    help=(
+        "Disable streaming the output. Best if not, but ok if you have a slow "
+        + "connection."
+    ),
 )
 def run(
     prompt_file: str,
     model: str,
     log_level: str,
     cuda_device_id: Optional[int],
-    stream: bool,
+    no_stream: bool,
 ) -> None:
     """
     Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
@@ -94,6 +104,8 @@ def run(
         The error level to use in logger.
     cuda_device_id : Optional[int]
         The ID of the CUDA device to use.
+    no_stream: bool
+        Disable streaming the output.
     """
     RichLogging.config(log_level.upper())
 
@@ -112,7 +124,7 @@ def run(
     from src.pub_sub_orchestrator import PubSubOrchestrator
 
     orchestrator = PubSubOrchestrator(
-        prompt_file=prompt_file, model=model, enable_stream=stream
+        prompt_file=prompt_file, model=model, enable_stream=not no_stream
     )
 
     asyncio.ensure_future(orchestrator.start())

@@ -7,3 +7,4 @@ model="WizardLM/WizardCoder-15B-V1.0"
 --model="TheBloke/WizardLM-13B-V1.2-AWQ"
 --model="TheBloke/dolphin-2.6-mistral-7B-dpo-laser-AWQ"
 --model="TheBloke/laser-dolphin-mixtral-2x7b-dpo-AWQ"  # FAVO
+TheBloke/dolphin-2.6-mistral-7B-dpo-laser-AWQ

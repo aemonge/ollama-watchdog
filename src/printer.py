@@ -59,7 +59,7 @@ class Printer(PublisherSubscriber):
             "   • ",
         ]
 
-        self._column = self.console.width
+        self._column = self.console.width + 1
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
         self._spin_char_len = len(self.spinner[0])
         self._multiline_block = False
@@ -83,11 +83,10 @@ class Printer(PublisherSubscriber):
 
         print("\r" + " " * self.console.width, end="\r")  # noqa: T201
         md = Markdown(self._buffer, code_theme="native", justify="left")
-        self.console.print(
-            md, no_wrap=True, emoji=True, markup=True, highlight=True
-        )
+        self.console.print(md, no_wrap=True, emoji=True, markup=True, highlight=True)
         self._buffer = ""
-        self._column = self.console.width
+        self._multiline_block = False
+        self._column = self.console.width + 1
 
     def is_multiline_block(self) -> bool:
         """
@@ -169,7 +168,7 @@ class Printer(PublisherSubscriber):
         ValueError
             If the console width is too small.
         """
-        self._column = self.console.width
+        self._column = self.console.width + 1
 
         if self._column < 0:
             raise ValueError("Console width is too small.")

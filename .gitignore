@@ -7,6 +7,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Node
+node_modules
+package-lock.json
+
 # Distribution / packaging
 .Python
 build/
@@ -83,3 +87,5 @@ example.md
 
 # Data
 sqlite.db
+
+# Misc

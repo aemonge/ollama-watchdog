@@ -1,101 +1,155 @@
-{%- if context and history -%}
-Answer the question by providing a single answer based on the context
-for expanding your knowledge and the conversation history to keep track of what has
-been said and simulate having memory. {% endif %}
-{%- if not context and history -%}
-Answer the question by providing a single answer based the conversation
-history to keep track of what has been said and simulate having memory. {% endif %}
-{%- if context and not history -%}
-Answer the question by providing a single answer based on the context
-for expanding your knowledge. {% endif %}
-{%- if not context and not history -%}
-Answer the question by providing a single answer.{% endif %}
+Summarize the conversation, emphasizing the most important information exchanged.
 
-In the conversation you are the "local-ai", acting concise and knowledgeable assistant.
-The other main participant in the conversation is "{{username}}", which is a
-{{ userinfo | wordwrap(88, break_long_words=False) }}.
-
-Adhere to the rules of the conversation and use the examples to clarify the rules that you
-don't understand, but make sure that you respect the rules even if the examples provided
-contradict some of them. If the information available is insufficient to answer the question,
-ask for the information you would need or respond with "I don't know".
-
-{# Forcing a tripple line break #}
-
-Rules
------
-
-    {%- if context -%}
-    - **Context**: Avoid referring directly to the context, it should only be used as a knowledge
-      base. Keeping the knowledge from references as subtle as posible.
-    - **Context**: Otherwise, if the information of the context will be explicitly referred in the
-      answer, you must provide references in a "References" section.
-    {% endif %}
-    {%- if history -%}
-    - **History**: Avoid repeating anything said in the conversation history.
-    - **History**: Use the history as your main source of memory.
-    {%- endif %}
-    - **Text**: Prefer a Markdown Syntax instead of Rich text to respond and interpret the questions.
-    - **Text**: Do not triple back-ticks ("```") directly to answer without enclosing in any format.
-      Only use them to enclose code examples.
-    - **Syntax**: The string `--- [//] # ("name")` indicates the end of a previous message and
-      the beginning of a new message from "name".
-    {%- if rules -%}{% for rule in rules %}
-    - {{rule}}{% endfor %}
-    {%- endif %}
-
-{%- if context %}
-{# Forcing a tripple line break #}
+When summarizing a conversation history, it is important to consider the context and
+purpose of the conversation. The summary should be written in a clear and concise
+manner, using bullet points or paragraphs to organize the information. Here is an
+example of how a conversation history can be summarized:
 
 
-Context
--------
+Guidelines for Summarizing Conversations
+----------------------------------------
 
-{{ context | wordwrap(84, break_long_words=False) | indent(4, true) }}
-{%- endif -%}
-
-{% if examples %}
-{# Forcing a tripple line break #}
-
-
-Examples
---------
-{% for example in examples %}
-{{ example | wordwrap(84, break_long_words=False) | indent(4, true) }}
-{%- endfor -%}
-{%- endif -%}
-
-{% if history or history_sumarized %}
-{# Forcing a tripple line break #}
+-   Focus on the most important information exchanged in the conversation.
+-   Use bullet points or paragraphs to organize the information in a clear and concise
+    manner.
+-   Use the user's own words when possible to accurately reflect their questions and
+    concerns.
+-   Avoid including unnecessary details or tangents that do not contribute to the main
+    topic of the conversation.
+-   Use proper grammar, spelling, and punctuation to ensure that the summary is easy to
+    read and understand.
+-   Keep the summary brief, but informative enough to provide context and value to the
+    conversation history.
 
 
-Conversation History
---------------------
-{%- if history_sumarized -%}
+Example 1 Conversation
+----------------------
 
+--- [//] # ("USER") Can you explain the difference between supervised and unsupervised
+learning?
+
+--- [//] # ("AI ASSISTANT") Sure! Supervised learning is a type of machine learning
+where the algorithm is trained on labeled data, meaning that the input data is paired
+with the correct output. The goal is to learn a mapping from inputs to outputs so that
+the algorithm can make accurate predictions on new, unseen data. In contrast,
+unsupervised learning is a type of machine learning where the algorithm is trained on
+unlabeled data, meaning that there are no predefined outputs. The goal is to find
+patterns or structure in the data without any prior knowledge of what the output should
+look like.
+
+--- [//] # ("USER") What are some common algorithms used in supervised learning?
+
+--- [//] # ("AI ASSISTANT") Some common algorithms used in supervised learning include
+linear regression, logistic regression, decision trees, random forests, support vector
+machines, and neural networks.
+
+
+Example 1 Summary
+-----------------
+
+-   The user asked about the difference between supervised and unsupervised learning.
+-   The assistant explained that supervised learning involves training an algorithm on
+    labeled data to learn a mapping from inputs to outputs, while unsupervised learning
+    involves finding patterns or structure in unlabeled data.
+-   The user asked about common algorithms used in supervised learning, and the
+    assistant listed several examples, including linear regression, logistic regression,
+    decision trees, random forests, support vector machines, and neural networks.
+
+
+Example 2 Conversation
+----------------------
+
+--- [//] # ("USER") What is MLOps, and why is it important?
+
+--- [//] # ("AI ASSISTANT") MLOps is a practice for collaboration and communication
+between data scientists and operations professionals to help manage production machine
+learning (ML) lifecycles. It involves automating and streamlining the process of
+deploying, monitoring, and updating ML models in production. MLOps is important because
+it helps ensure that ML models are reliable, scalable, and reproducible, and that they
+deliver business value.
+
+--- [//] # ("USER") What are some best practices for implementing MLOps?
+
+--- [//] # ("AI ASSISTANT") Some best practices for implementing MLOps include:
+
+-   Using version control to track changes to code and data
+-   Automating testing and validation of ML models
+-   Monitoring model performance in production
+-   Implementing continuous integration and continuous deployment (CI/CD) pipelines
+-   Using infrastructure as code (IaC) to manage deployment environments
+-   Collaborating closely between data scientists and operations professionals
+
+
+Example 2 Summary
+-----------------
+
+-   The user asked about MLOps and its importance.
+-   The assistant explained that MLOps is a practice for managing production ML
+    lifecycles, and that it is important for ensuring that ML models are reliable,
+    scalable, and reproducible.
+-   The user asked about best practices for implementing MLOps, and the assistant listed
+    several examples, including using version control, automating testing and
+    validation, monitoring model performance, implementing CI/CD pipelines, using IaC,
+    and collaborating closely between data scientists and operations professionals.
+
+
+Example 3 Conversation
+----------------------
+
+The conversation began with a discussion about the benefits of using AI in customer
+service. The user asked about the potential drawbacks of using AI, and the assistant
+provided a detailed response.
+
+The conversation then shifted to the topic of AI ethics. The user asked about the
+potential biases in AI algorithms, and the assistant explained how these biases can
+arise and how they can be addressed.
+
+--- [//] # ("USER") What are the benefits of using AI in customer service?
+
+--- [//] # ("AI ASSISTANT") AI can provide faster and more efficient customer service,
+as well as 24/7 availability. It can also handle large volumes of requests
+simultaneously, freeing up human agents to focus on more complex issues.
+
+--- [//] # ("USER") What are the potential drawbacks of using AI in customer service?
+
+--- [//] # ("AI ASSISTANT") AI can sometimes struggle with complex or nuanced requests,
+and may not be able to provide the same level of personalized service as a human agent.
+Additionally, there may be concerns about job displacement and privacy.
+
+--- [//] # ("USER") What about AI ethics? How can biases in AI algorithms be addressed?
+
+--- [//] # ("AI ASSISTANT") Biases in AI algorithms can arise from biased training data
+or biased decision-making processes. To address these biases, it is important to use
+diverse and representative training data, as well as to incorporate fairness and
+transparency into the AI development process.
+
+
+Example 3 Summary
+-----------------
+
+-   The conversation covered the benefits and drawbacks of using AI in customer service,
+    as well as the topic of AI ethics.
+-   The user asked about the potential biases in AI algorithms, and the assistant
+    explained how these biases can arise and how they can be addressed.
+-   The assistant highlighted the benefits of using AI in customer service, including
+    faster and more efficient service, 24/7 availability, and the ability to handle
+    large volumes of requests simultaneously.
+-   The potential drawbacks of using AI in customer service include difficulty with
+    complex or nuanced requests, job displacement, and privacy concerns.
+
+
+Conversation
+------------
+{% if history_sumarized %}
 {{ history_sumarized | wordwrap(88, break_long_words=False) }}
-
-{%- endif -%}
+{% endif %}
 {% for message in history %}
-    --- [//] # ("{{message.role}}")
+--- [//] # ("{{message.role}}")
 
 {{ message.content | wordwrap(84, break_long_words=False) | indent(4, true) }}
-
 {% endfor %}
-{%- endif -%}
+{% endif %}
 
-{# Forcing a tripple line break #}
+Summary
+-------
 
-Question
---------
-
-    --- [//] # ("{{username}}")
-
-{{ query | wordwrap(84, break_long_words=False) | indent(4, true) }}
-
-
-{# Forcing a tripple line break #}
-Answer
-------
-
-    --- [//] # ("{{botname}}")

@@ -4,6 +4,10 @@ version = "0.0.1"
 description = "A Linux daemon that enhances the chat experience in Ollama by handling file includes and web crawling"
 authors = ["aemonge <andres@babiopower.com>"]
 readme = "README.md"
+packages = [{ include = "src" }]
+
+[tool.poetry.scripts]
+owd = "src.cli:run"
 
 [tool.poetry.dependencies]
 python = "^3.11"
