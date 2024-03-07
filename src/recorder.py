@@ -1,7 +1,7 @@
 """Record the conversation between AI and Human in a SQLite DB."""
 
 import logging
-from typing import AsyncIterator, Dict, Iterator, List, cast
+from typing import AsyncIterator, Dict, Iterator, cast
 
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.messages.base import BaseMessage
@@ -45,6 +45,10 @@ class Recorder(PublisherSubscriber):
             ),
             "processed": SQLChatMessageHistory(
                 session_id=f"processed-{session_id}",
+                connection_string=connection_string,
+            ),
+            "summarized": SQLChatMessageHistory(
+                session_id=f"summarized-{session_id}",
                 connection_string=connection_string,
             ),
         }
@@ -105,6 +109,27 @@ class Recorder(PublisherSubscriber):
         logging.debug(event)
         await self.publish(["summarize"], event)
 
+    async def _trigger_sumarize(self) -> None:
+        """Trigger the event to summarize, with information from DB."""
+        if not (last_messages := self.history["processed"].messages[-SUMMARIZE_EVERY:]):
+            logging.error(
+                f"Empty history, cant summarize: in {self.__class__.__name__}"
+            )
+
+        else:
+            if not (
+                history_sumarized := self.history["summarized"].messages[-1]
+            ) or not (summary := cast(str, history_sumarized.content)):
+                summary = None
+
+            await self.publish(
+                ["summarize"],
+                MessageEvent(
+                    "chat_summary",
+                    PromptMessage(history=last_messages, history_sumarized=summary),
+                ),
+            )
+
     async def _ai_message(self, event: MessageEvent) -> None:
         """
         Process the AI message.
@@ -133,8 +158,9 @@ class Recorder(PublisherSubscriber):
 
         self.history["processed"].add_message(msg)
         self.history["unprocessed"].add_message(msg)
+
         if len(self.history["processed"].messages) % SUMMARIZE_EVERY == 0:
-            return await self._summarize(event)
+            await self._trigger_sumarize()
 
         RichLogging.unblock()
 
@@ -147,18 +173,26 @@ class Recorder(PublisherSubscriber):
         event : MessageEvent
             The event containing the message.
         """
-        if not (
-            msg := await self._normalize_message(
-                cast(PromptMessage, event.contents).prompt, type="ai"
+        if (
+            not isinstance(event.contents, PromptMessage)
+            or not event.contents.prompt
+            or not (
+                msg := await self._normalize_message(event.contents.prompt, type="ai")
             )
         ):
             return
+
+        if history_sumarized := self.history["summarized"].messages:
+            history_sumarized = cast(str, history_sumarized[-1].content)
+        else:
+            history_sumarized = None
 
         event = MessageEvent(
             "chat",
             PromptMessage(
                 cast(str, msg.content),
-                history=list(self.history["processed"].messages[-SUMMARIZE_EVERY:]),
+                history=self.history["processed"].messages[-SUMMARIZE_EVERY:],
+                history_sumarized=history_sumarized,
             ),
             event.author,
         )

@@ -6,8 +6,12 @@ import os
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+from langchain_community.llms.vllm import VLLM
+
+from src.chains.mute_processing import MuteProcessing
 from src.chatter import Chatter
-from src.models.literals_types_constants import TopicsLiteral
+from src.libs.rich_logger import RichLogging
+from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH, TopicsLiteral
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherSubscriber
 from src.printer import Printer
@@ -19,6 +23,55 @@ from src.watcher import Watcher
 
 class PubSubOrchestrator(object):
     """Manages subscribers and publishes messages."""
+
+    def _init_llm(self, model: str = "mock") -> None:
+        """
+        Construct the LLM instance.
+
+        Parameters
+        ----------
+        model : str
+            The model to use for the LLM.
+        """
+        vllm_kwargs = {
+            "gpu_memory_utilization": 0.95,
+            "max_model_len": 8192,  # 8192,
+            "enforce_eager": True,
+        }
+        with RichLogging.quiet():
+            self.llm = VLLM(
+                client=None,
+                model=model,
+                download_dir=VLLM_DOWNLOAD_PATH,
+                callbacks=[MuteProcessing()],
+                trust_remote_code=True,  # mandatory for hf models
+                vllm_kwargs=vllm_kwargs,
+                max_new_tokens=512,  # 512  # noqa: E800
+                # cache=False,  # noqa: E800
+                # verbose=False,  # noqa: E800
+                # top_k=1,  # noqa: E800
+                # top_p=0.95,  # noqa: E800
+                # temperature=0.8,  # noqa: E800
+            )
+
+    def _init_actors(self) -> None:
+        """Initialize the main classes."""
+        self.printer = Printer(self.publish)
+        self.chatter = Chatter(
+            self.publish,
+            llm=self.llm,
+            username=self.user,
+            enable_stream=self.enable_stream,
+        )
+        self.prompt_processor = PromptProcessor(self.user, self.publish)
+        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
+        self.summarizer = Summarizer(self.publish, llm=self.llm)
+        self.watcher = Watcher(
+            self.filename,
+            self.user,
+            asyncio.get_event_loop(),
+            self.publish,
+        )
 
     def __init__(self, prompt_file: str, model: str, enable_stream: bool) -> None:
         """
@@ -34,24 +87,14 @@ class PubSubOrchestrator(object):
             Should the LLM stream the response
         """
         self.filename = prompt_file
+        self.model = model
         self.user = str(os.getenv("USER"))
-
-        self.printer = Printer(self.publish)
-
-        self.chatter = Chatter(
-            self.publish, model=model, username=self.user, enable_stream=enable_stream
-        )
-        self.prompt_processor = PromptProcessor(self.user, self.publish)
-        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
-        self.summarizer = Summarizer(self.publish)
-        self.watcher = Watcher(
-            self.filename,
-            self.user,
-            asyncio.get_event_loop(),
-            self.publish,
-        )
+        self.enable_stream = enable_stream
+        self._init_llm(model=self.model)
+        self._init_actors()
 
         self.processed_events: set = set()  # Set to store processed event timestamps
+
         self.listeners: Dict[TopicsLiteral, list] = {
             "ask": [self.chatter],
             "chain": [self.prompt_processor],

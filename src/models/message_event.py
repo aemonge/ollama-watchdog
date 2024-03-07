@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from src.models.literals_types_constants import EventsLiteral, ExtendedMessage
 
@@ -14,20 +14,20 @@ class PromptMessage:
 
     Parameters
     ----------
-    context : str
+    context : str, optional
         The context for the prompt.
-    prompt : ExtendedMessage
+    prompt : ExtendedMessage, optional
         The prompt it self.
-    examples : List[ExtendedMessage]
+    examples : List[ExtendedMessage], optional
         The examples of the prompt
-    history : List[ExtendedMessage]
+    history : List[ExtendedMessage], optional
         The history of the prompt.
     """
 
-    prompt: ExtendedMessage
+    prompt: Optional[ExtendedMessage] = None
     context: Optional[str] = None
     examples: Optional[List[ExtendedMessage]] = None
-    history: Optional[List[ExtendedMessage]] = None
+    history: Optional[Sequence[ExtendedMessage]] = None
     history_sumarized: Optional[str] = None
 
 

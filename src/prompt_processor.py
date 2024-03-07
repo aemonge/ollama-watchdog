@@ -114,7 +114,13 @@ class PromptProcessor(PublisherSubscriber):
             logging.error("not isinstance(event.contents, str)", event.contents)
             return
 
-        prompt = PromptMessage(self.process_prompt(event.contents))
+        if (
+            not (prompt := PromptMessage(self.process_prompt(event.contents)))
+            or not prompt.prompt
+        ):
+            logging.error("not isinstance(prompt.prompt, PromptMessage)", prompt.prompt)
+            return
+
         prompt.context = self.generate_context(prompt.prompt)
 
         if isinstance(event.contents, PromptMessage):

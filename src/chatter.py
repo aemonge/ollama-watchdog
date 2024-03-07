@@ -3,37 +3,17 @@
 import asyncio
 import logging
 import pathlib
-from typing import AsyncIterator, Callable, List, Optional, Union, cast
+from typing import AsyncIterator, List, Optional, Union, cast
 
 from langchain.prompts import PromptTemplate
 from langchain_community.llms.vllm import VLLM
-from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.language_models.base import LanguageModelInput
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage, BaseMessageChunk
 
-from src.libs.rich_logger import RichLogging
-from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH, ExtendedMessage
 from src.models.message_event import MessageEvent, PromptMessage
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
-
-
-class MuteProcessing(BaseCallbackHandler):
-    """Mutes the processing progress bar."""
-
-    def on_llm_start(
-        self, *args, **kwargs  # noqa: U100, ANN002, ANN003  # pyright: ignore
-    ):  # noqa: ANN201, DAR101
-        """Mute on start."""
-        self.quiet_context = RichLogging.quiet()
-        self.quiet_context.__enter__()
-
-    def on_llm_end(
-        self, *args, **kwargs  # noqa: U100, ANN002, ANN003  # pyright: ignore
-    ):  # noqa: ANN201, DAR101
-        """Un-Mute on end."""
-        self.quiet_context.__exit__(None, None, None)
 
 
 class Chatter(PublisherSubscriber):
@@ -55,7 +35,7 @@ class Chatter(PublisherSubscriber):
         """
         logging.info(
             f'Using the "{self.template.name=}" prompt template with: \n'
-            + f"{self.model=}, {self.username=}, and {self.userinfo.name=}"
+            + f"{self.llm.model=}, {self.username=}, and {self.userinfo.name=}"
         )
         prompt_template = PromptTemplate.from_template(
             template=self.template_content, template_format="jinja2"
@@ -64,56 +44,13 @@ class Chatter(PublisherSubscriber):
         return prompt_template.format(
             username=self.username,
             userinfo=self.userinfo_content,
-            botname=self.model,
+            botname=self.llm.model,
             query=prompt.prompt,
             context=prompt.context,
             examples=prompt.examples,
             history=prompt.history,
             history_sumarized=prompt.history_sumarized,
         )
-
-    async def start_unindented(
-        self, responses: str | AsyncIterator[str] | AsyncIterator[BaseMessageChunk]
-    ) -> AsyncIterator[ExtendedMessage]:
-        """
-        Remove any staring indent from the response.
-
-        If the response starts with an indentation, it will have to remove such
-        indentation form all new lines. So if it started with four spaces as indent
-        every line that follows a new line would have to skip four spaces.
-
-        Parameters
-        ----------
-        responses: AsyncIterator[str]
-            The responses from the LLM
-
-        Yields
-        ------
-        : str
-            The processed response from the LLM.
-        """
-        indent_length: Optional[int] = None
-
-        if isinstance(responses, str):
-            _response = responses.split("\n")
-            indent_length = len(_response[0]) - len(_response[0].lstrip(" "))
-            for r in _response:
-                yield r[indent_length:] if indent_length else r
-
-        else:
-            async for response in responses:
-                text: str = (
-                    cast(str, response.content)
-                    if isinstance(response, BaseMessageChunk)
-                    else response
-                )
-                if indent_length is None:
-                    indent_length = len(text) - len(text.lstrip(" "))
-
-                if text[:indent_length] == " " * indent_length:
-                    text = text[indent_length:]
-
-                yield response
 
     async def remove_prompt_from_response(
         self, prompts: PromptMessage, responses: AsyncIterator[str]
@@ -181,11 +118,9 @@ class Chatter(PublisherSubscriber):
     def __init__(
         self,
         publish: PublisherCallback,
-        model: str = "mock",
+        llm: VLLM,
         username: Optional[str] = None,
         enable_stream: bool = False,
-        response_handler: Optional[Callable] = None,
-        prompt_handler: Optional[Callable] = None,
     ) -> None:
         """
         Construct the LLM chat with SQLite.
@@ -194,48 +129,16 @@ class Chatter(PublisherSubscriber):
         ----------
         publish : PublisherCallback
             publish a new event to parent
-        model : str
-            The model to use for the LLM.
+        llm : VLLM
+            The model instance.
         username : optional, str
             The name of the user
         enable_stream: bool
             Should the LLM stream the response
-        response_handler: Callable, Optional
-            The handling of the response
-        prompt_handler: Callable, Optional
-            The handling of the prompts
         """
-        self.model = model
+        self.llm = llm
         self.enable_stream = enable_stream
         self.username = username or "local-user"
-        self.response_handler = None
-        # self.response_handler = (
-        #     self.start_unindented if response_handler is None else response_handler
-        # )  # noqa: E800
-        self.prompt_handler = (
-            self.apply_prompt_template if prompt_handler is None else prompt_handler
-        )
-
-        vllm_kwargs = {
-            "gpu_memory_utilization": 0.95,
-            "max_model_len": 8192,  # 8192,
-            "enforce_eager": True,
-        }
-        with RichLogging.quiet():
-            self.llm = VLLM(
-                client=None,
-                model=model,
-                download_dir=VLLM_DOWNLOAD_PATH,
-                callbacks=[MuteProcessing()],
-                trust_remote_code=True,  # mandatory for hf models
-                vllm_kwargs=vllm_kwargs,
-                max_new_tokens=512,  # 512  # noqa: E800
-                # cache=False,  # noqa: E800
-                # verbose=False,  # noqa: E800
-                # top_k=1,  # noqa: E800
-                # top_p=0.95,  # noqa: E800
-                # temperature=0.8,  # noqa: E800
-            )
 
         self._set_template()
         self.publish = publish  # type: ignore[reportAttributeAccessIssue]
@@ -297,25 +200,18 @@ class Chatter(PublisherSubscriber):
             logging.error(msg)
             return
 
-        logging.info(f'{self.__class__.__name__} will "ask" "{self.model}"')
-        if self.model == "mock":
+        logging.info(f'{self.__class__.__name__} will "ask" "{self.llm.model}"')
+        if self.llm.model == "mock":
             response = self._mock_astream()
         else:
-            prompt = (
-                self.prompt_handler(event.contents)
-                if self.prompt_handler
-                else cast(str, event.contents)
-            )
+            prompt = self.apply_prompt_template(event.contents)
             if self.enable_stream:
                 response = self.llm.astream(prompt)
             else:
                 response = self.llm.invoke(prompt)
 
         logging.info(f"{self.__class__.__name__} is handling the response.")
-        if hasattr(self, "response_handler") and self.response_handler is not None:
-            response = self.response_handler(response)
-
-        event = MessageEvent("ai_message", response, self.model)
+        event = MessageEvent("ai_message", response, self.llm.model)
         logging.info(f'{self.__class__.__name__} is sending ["print", "record"] events')
         logging.debug(event)
         await self.publish(["print", "record"], event)
