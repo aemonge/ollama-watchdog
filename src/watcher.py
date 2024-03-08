@@ -60,10 +60,10 @@ class Watcher(FileSystemEventHandler, PublisherSubscriber):
         self.last_content = current_content
 
         event_data = MessageEvent("human_raw_message", current_content, self.user)
-        logging.info('Sending "record" event')
+        logging.info(f'{self.__class__.__name__} is sending ["print", "chain"] events')
         logging.debug(event_data)
 
-        coroutine = self.publish(["record"], event_data)
+        coroutine = self.publish(["print", "chain"], event_data)
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 
     def on_modified(self, event: FileModifiedEvent) -> None:

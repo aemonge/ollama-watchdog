@@ -21,28 +21,32 @@ Guidelines for Summarizing Conversations
 -   Keep the summary brief, but informative enough to provide context and value to the
     conversation history.
 
-
 Example 1 Conversation
 ----------------------
 
---- [//] # ("{{username}}") Can you explain the difference between supervised and unsupervised
-learning?
+--- [//] # ("{{username}}")
 
---- [//] # ("{{botname}}") Sure! Supervised learning is a type of machine learning
-where the algorithm is trained on labeled data, meaning that the input data is paired
-with the correct output. The goal is to learn a mapping from inputs to outputs so that
-the algorithm can make accurate predictions on new, unseen data. In contrast,
-unsupervised learning is a type of machine learning where the algorithm is trained on
-unlabeled data, meaning that there are no predefined outputs. The goal is to find
-patterns or structure in the data without any prior knowledge of what the output should
-look like.
+Can you explain the difference between supervised and unsupervised learning?
 
---- [//] # ("{{username}}") What are some common algorithms used in supervised learning?
+--- [//] # ("{{botname}}")
 
---- [//] # ("{{botname}}") Some common algorithms used in supervised learning include
-linear regression, logistic regression, decision trees, random forests, support vector
-machines, and neural networks.
+Sure! Supervised learning is a type of machine learning where the algorithm is trained
+on labeled data, meaning that the input data is paired with the correct output. The goal
+is to learn a mapping from inputs to outputs so that the algorithm can make accurate
+predictions on new, unseen data. In contrast, unsupervised learning is a type of machine
+learning where the algorithm is trained on unlabeled data, meaning that there are no
+predefined outputs. The goal is to find patterns or structure in the data without any
+prior knowledge of what the output should look like.
 
+--- [//] # ("{{username}}")
+
+What are some common algorithms used in supervised learning?
+
+--- [//] # ("{{botname}}")
+
+Some common algorithms used in supervised learning include linear regression, logistic
+regression, decision trees, random forests, support vector machines, and neural
+networks.
 
 Example 1 Summary
 -----------------
@@ -55,22 +59,28 @@ Example 1 Summary
     assistant listed several examples, including linear regression, logistic regression,
     decision trees, random forests, support vector machines, and neural networks.
 
-
 Example 2 Conversation
 ----------------------
 
---- [//] # ("{{username}}") What is MLOps, and why is it important?
+--- [//] # ("{{username}}")
 
---- [//] # ("{{botname}}") MLOps is a practice for collaboration and communication
-between data scientists and operations professionals to help manage production machine
-learning (ML) lifecycles. It involves automating and streamlining the process of
-deploying, monitoring, and updating ML models in production. MLOps is important because
-it helps ensure that ML models are reliable, scalable, and reproducible, and that they
-deliver business value.
+What is MLOps, and why is it important?
 
---- [//] # ("{{username}}") What are some best practices for implementing MLOps?
+--- [//] # ("{{botname}}")
 
---- [//] # ("{{botname}}") Some best practices for implementing MLOps include:
+MLOps is a practice for collaboration and communication between data scientists and
+operations professionals to help manage production machine learning (ML) lifecycles. It
+involves automating and streamlining the process of deploying, monitoring, and updating
+ML models in production. MLOps is important because it helps ensure that ML models are
+reliable, scalable, and reproducible, and that they deliver business value.
+
+--- [//] # ("{{username}}")
+
+What are some best practices for implementing MLOps?
+
+--- [//] # ("{{botname}}")
+
+Some best practices for implementing MLOps include:
 
 -   Using version control to track changes to code and data
 -   Automating testing and validation of ML models
@@ -78,7 +88,6 @@ deliver business value.
 -   Implementing continuous integration and continuous deployment (CI/CD) pipelines
 -   Using infrastructure as code (IaC) to manage deployment environments
 -   Collaborating closely between data scientists and operations professionals
-
 
 Example 2 Summary
 -----------------
@@ -92,7 +101,6 @@ Example 2 Summary
     validation, monitoring model performance, implementing CI/CD pipelines, using IaC,
     and collaborating closely between data scientists and operations professionals.
 
-
 Example 3 Conversation
 ----------------------
 
@@ -104,25 +112,36 @@ The conversation then shifted to the topic of AI ethics. The user asked about th
 potential biases in AI algorithms, and the assistant explained how these biases can
 arise and how they can be addressed.
 
---- [//] # ("{{username}}") What are the benefits of using AI in customer service?
+--- [//] # ("{{username}}")
 
---- [//] # ("{{botname}}") AI can provide faster and more efficient customer service,
-as well as 24/7 availability. It can also handle large volumes of requests
-simultaneously, freeing up human agents to focus on more complex issues.
+What are the benefits of using AI in customer service?
 
---- [//] # ("{{username}}") What are the potential drawbacks of using AI in customer service?
+--- [//] # ("{{botname}}")
 
---- [//] # ("{{botname}}") AI can sometimes struggle with complex or nuanced requests,
-and may not be able to provide the same level of personalized service as a human agent.
-Additionally, there may be concerns about job displacement and privacy.
+AI can provide faster and more efficient customer service, as well as 24/7 availability.
+It can also handle large volumes of requests simultaneously, freeing up human agents to
+focus on more complex issues.
 
---- [//] # ("{{username}}") What about AI ethics? How can biases in AI algorithms be addressed?
+--- [//] # ("{{username}}")
 
---- [//] # ("{{botname}}") Biases in AI algorithms can arise from biased training data
-or biased decision-making processes. To address these biases, it is important to use
-diverse and representative training data, as well as to incorporate fairness and
-transparency into the AI development process.
+What are the potential drawbacks of using AI in customer service?
 
+--- [//] # ("{{botname}}")
+
+AI can sometimes struggle with complex or nuanced requests, and may not be able to
+provide the same level of personalized service as a human agent. Additionally, there may
+be concerns about job displacement and privacy.
+
+--- [//] # ("{{username}}")
+
+What about AI ethics? How can biases in AI algorithms be addressed?
+
+--- [//] # ("{{botname}}")
+
+Biases in AI algorithms can arise from biased training data or biased decision-making
+processes. To address these biases, it is important to use diverse and representative
+training data, as well as to incorporate fairness and transparency into the AI
+development process.
 
 Example 3 Summary
 -----------------
@@ -140,6 +159,7 @@ Example 3 Summary
 
 Conversation
 ------------
+
 {% if history_sumarized %}
 {{ history_sumarized | wordwrap(88, break_long_words=False) }}
 {% endif %}
@@ -148,7 +168,6 @@ Conversation
 
 {{ message.content | wordwrap(84, break_long_words=False) | indent(4, true) }}
 {% endfor %}
-{% endif %}
 
 Summary
 -------

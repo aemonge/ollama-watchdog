@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Sequence
 
+
 from src.models.literals_types_constants import EventsLiteral, ExtendedMessage
 
 

@@ -67,14 +67,14 @@ class Summarizer(PublisherSubscriber):
             template=self.template_content, template_format="jinja2"
         )
 
-        a = prompt_template.format(
+        print(prompt.history)
+
+        return prompt_template.format(
             history=prompt.history,
             history_sumarized=prompt.history_sumarized,
             username=self.username,
             botname=self.llm.model,
         )
-        print(a)
-        return a
 
     async def listen(self, event: MessageEvent) -> None:
         """
@@ -94,6 +94,7 @@ class Summarizer(PublisherSubscriber):
         logging.info(f'{self.__class__.__name__} will "summarize" "{self.llm.model}"')
         prompt = self.apply_prompt_template(event.contents)
         response = self.llm.invoke(prompt)
+        # print(response)
 
         event = MessageEvent("chat_summary", response, self.llm.model)
         logging.info(f'{self.__class__.__name__} is sending ["record"] event')

@@ -3,10 +3,11 @@ import pathlib
 import textwrap
 from typing import List
 
-from rich.console import Console
 from jinja2 import Environment, PackageLoader, select_autoescape
 from langchain.prompts import PromptTemplate
 from langchain_community.llms.vllm import VLLM
+from rich.console import Console
+from rich.status import Status
 
 from src.models.literals_types_constants import VLLM_DOWNLOAD_PATH
 from src.printer import Printer
@@ -14,6 +15,7 @@ from src.printer import Printer
 SEP = "=" * 88
 
 console = Console()
+
 
 def test_raw(model: str = "TheBloke/laser-dolphin-mixtral-2x7b-dpo-AWQ") -> None:
     llm = VLLM(
@@ -352,7 +354,8 @@ async def test_printer_with_middle_indent() -> None:
 
 
 async def test_printer_with_starting_emptycode_simple() -> None:
-    _text = textwrap.dedent("""\
+    _text = textwrap.dedent(
+        """\
     Will show a code with no language, and at the end one with language
     ```
     Thought this should be respected
@@ -366,7 +369,8 @@ async def test_printer_with_starting_emptycode_simple() -> None:
     ```ruby
     puts "Like a gem"
     ```
-    No extra spaces.""")
+    No extra spaces."""
+    )
     print("========= Using My printer  ==========")
     printer = Printer(publish=lambda _: _)  # pyright: ignore
     await printer.pretty_print(_text)
@@ -378,8 +382,10 @@ async def test_printer_with_starting_emptycode_simple() -> None:
     md = Markdown(_text, code_theme="native", justify="left")
     console.print(md)
 
+
 async def test_printer_with_starting_emptycode() -> None:
-    _text = textwrap.dedent("""\
+    _text = textwrap.dedent(
+        """\
     Will show a code with no language, and at the end one with language
     But should be trimmed.
     ```
@@ -397,7 +403,8 @@ async def test_printer_with_starting_emptycode() -> None:
     console.log(" Un INdented  JS")
     ```
 
-    No extra spaces.""")
+    No extra spaces."""
+    )
     print("========= Using My printer  ==========")
     printer = Printer(publish=lambda _: _)  # pyright: ignore
     await printer.pretty_print(_text)
@@ -478,8 +485,36 @@ async def test_printer_with_middle_emptycode() -> None:
     console.print(md)
 
 
+async def test_console_spinner():
+    class Test:
+        _loading_task = None
+        console = Console()
+        status = None  # Status("[bold #326990]Chatting...", spinner="dots")
+
+        @classmethod
+        async def finish(cls):
+            if cls.status is not None:
+                cls.status.stop()
+
+        @classmethod
+        async def start(cls):
+            cls.status = Status(
+                "[bold #326990]Chatting...", spinner="dots", console=cls.console
+            )
+            cls.status.start()
+
+    Test.console.print("where the chatting?")
+    await Test.start()
+    await asyncio.sleep(2)
+    Test.console.print("It's visible!")
+    await asyncio.sleep(2)
+    await Test.finish()
+    Test.console.print("I dont see any spinner")
+
+
 async def main():
     console.clear()
+    await test_console_spinner()
     # test_prompt_template_llmless()
     # test_prompt_template()
     # test_prompt_template_with_history(disable_llm=True)

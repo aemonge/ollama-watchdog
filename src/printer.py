@@ -20,10 +20,10 @@ import logging
 import re
 from typing import AsyncGenerator, AsyncIterator, Generator, Iterator, cast
 
-from rich.console import Console
 from rich.markdown import Markdown
 from rich.text import Text
 
+from src.libs.rich_logger import RichLogging
 from src.models.literals_types_constants import ExtendedMessage
 from src.models.message_event import MessageEvent
 from src.models.publish_subscribe_class import PublisherCallback, PublisherSubscriber
@@ -41,7 +41,7 @@ class Printer(PublisherSubscriber):
         publish : PublisherCallback
             publish a new event to parent
         """
-        self.console = Console()
+        self.console = RichLogging.console
         self._buffer = ""
         self._spinId = 0
         self.spinner = [

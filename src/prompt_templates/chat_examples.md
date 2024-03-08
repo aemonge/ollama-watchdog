@@ -266,3 +266,11 @@ Additionally, I've separated the exception handling into a new function
 process_element_with_exception. This function catches the exception, prints the error
 message, and then re-raises the exception to maintain the original behavior while making
 the code more modular and easier to understand.
+
+--- [//] # ("USER")
+
+Now a off-topic conversation, what's the capital of France?
+
+--- [//] # ("AI Assistant")
+
+It's Paris.

@@ -29,14 +29,12 @@ EventsLiteral = Literal[
     "system_message",
 ]
 
-DatabasePrefixes = Literal[
-    "processed",
-    "summarized",
-    "unprocessed",
-]
+DatabasePrefixes = Literal["chat_summary", "chat_history"]
 
 CONSOLE_PADDING = 1
 RESPONSE_TIMEOUT = 10
 TIMEOUT = 3000
-SUMMARIZE_EVERY = 60  # 2 * 2
+SUMMARIZE_EVERY = 2  # 2 * 2
 VLLM_DOWNLOAD_PATH = "/home/LLM/"
+DB_PATH = "/home/LLM/chat_history.db"
+DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"

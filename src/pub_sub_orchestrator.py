@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 from typing import Dict, List, Optional
-from uuid import uuid4
 
 from langchain_community.llms.vllm import VLLM
 
@@ -64,8 +63,8 @@ class PubSubOrchestrator(object):
             enable_stream=self.enable_stream,
         )
         self.prompt_processor = PromptProcessor(self.user, self.publish)
-        self.recorder = Recorder(str(uuid4()), "sqlite:///sqlite.db", self.publish)
-        self.summarizer = Summarizer(self.publish, llm=self.llm)
+        self.recorder = Recorder(self.publish)
+        self.summarizer = Summarizer(self.publish, llm=self.llm, username=self.user)
         self.watcher = Watcher(
             self.filename,
             self.user,
@@ -90,8 +89,14 @@ class PubSubOrchestrator(object):
         self.model = model
         self.user = str(os.getenv("USER"))
         self.enable_stream = enable_stream
+
+        if logging.getLogger().getEffectiveLevel() > logging.DEBUG:
+            RichLogging.block("Initializing...")
+
         self._init_llm(model=self.model)
         self._init_actors()
+        if logging.getLogger().getEffectiveLevel() > logging.DEBUG:
+            RichLogging.unblock()
 
         self.processed_events: set = set()  # Set to store processed event timestamps
 

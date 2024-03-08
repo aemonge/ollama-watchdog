@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Iterator, List
 
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.status import Status
 from rich.text import Text
 
 
@@ -24,6 +25,8 @@ class RichLogging(RichHandler):
     _blocked = True  # Class-level attribute to control quiet mode
 
     console = Console()
+
+    spinner = None
 
     TRACE_LEVEL_NUM: ClassVar[int] = 15
 
@@ -49,7 +52,6 @@ class RichLogging(RichHandler):
             Keyword arguments passed to RichHandler.
         """
         super().__init__(*args, **kwargs)
-        self.console = Console()
 
     def emit(self, record: logging.LogRecord) -> None:
         """
@@ -88,16 +90,27 @@ class RichLogging(RichHandler):
         return self.console.width - 2
 
     @classmethod
-    def block(cls) -> None:
-        """Set block to True."""
-        logging.info("Blocking the input read")
+    def block(cls, msg: str = "Chatting...", style: str = "[bold #326990]") -> None:
+        """
+        Set block to True.
+
+        Parameters
+        ----------
+        msg : str
+            The message to display, default is 'Chatting...'
+        style : str
+            The style to display the message, default is [bold #326990]
+        """
         cls._blocked = True
+        cls.spinner = Status(f"{style} {msg}", spinner="dots", console=cls.console)
+        cls.spinner.start()
 
     @classmethod
     def unblock(cls) -> None:
         """Set block to False."""
-        logging.info("Un Blocked")
         cls._blocked = False
+        if cls.spinner is not None:
+            cls.spinner.stop()
 
     @classmethod
     def is_blocked(cls) -> bool:
