@@ -56,13 +56,12 @@ def ask_web_llm(
             )
             include_content = cast(str, include_content.choices[0].message.content)
 
-            # Not add the padding if found
+            code_block = [f'**Asking __perplexity llm__ "{question}"**:\n\n']
             include_content = [
-                padding + line + "\n" for line in include_content.split("\n")
+                line if i == 0 else padding + line
+                for i, line in enumerate(include_content.split("\n"))
             ]
-
-            code_block = [f'{padding}**Asking __perplexity llm__ "{question}"**:\n\n']
-            code_block += [f"{padding}\n"] + include_content + [f"\n{padding}"]
+            code_block += include_content + ["\n"]
             content_list[i] = "".join(code_block)
 
     return "\n".join(content_list)

@@ -74,9 +74,7 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Ability to include all types of files, like images.
 -   [x] On error, display a message from `system` that tells us the error. Make sure
     https connection errors are being parsed and sent.
--   [-] Omit commented string to prompt `<!-- -->`.
--   [ ] keep the response linted in markdown, or at least in a max-line-length, so that
-        we can remove lines with Tails.
+-   [x] Omit commented string to prompt `<!-- -->`.
 -   [x] Implement and think how to allow Tails to adapt to shorter terminals/console in
         width.
 -   [x] After a set amount of time with no response from the server, send the buffer to
@@ -108,6 +106,7 @@ To use `ollama-watchdog`, follow these steps:
 -   [ ] Implement a simple "working" event that prints a loading spinner in the middle
 -   [ ] Move all event triggers and listeners to the orchestrator, to centralize the
         communication and provide a way to log messages pathways.
+-   [ ] Use jinja templates for all the context: Ask GPT, web search, etc...
 
 # Notes to organize
 

@@ -38,12 +38,14 @@ def get_website_content(content: str) -> str:
                 include_content = re.sub("\n+", "\n", include_content)
 
                 # Not add the padding if found
-                include_content = [padding + line for line in include_content]
+                include_content = [
+                    padding + line for line in include_content.split("\n")
+                ]
 
-            except FileNotFoundError:
+            except requests.exceptions.RequestException:
                 include_content = ["<-- include website not found -->"]
 
             code_block = [f"{padding}**{url}**:\n\n"]
-            code_block += [f"{padding}```\n"] + include_content + [f"{padding}```"]
+            code_block += [f"{padding}```\n"] + include_content + [f"\n{padding}```"]
             content_list[i] = "".join(code_block)
     return "\n".join(content_list)
