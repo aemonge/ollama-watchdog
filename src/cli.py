@@ -7,6 +7,7 @@ import logging
 from typing import Optional
 
 import click
+from icecream import install
 from torch import cuda
 from torch.cuda import get_device_properties, set_device
 from twisted.internet import asyncioreactor
@@ -16,6 +17,8 @@ from src.libs.rich_logger import RichLogging
 asyncioreactor.install(asyncio.get_event_loop())
 
 from twisted.internet import reactor  # noqa: E402
+
+install()
 
 
 @click.command()
@@ -43,13 +46,13 @@ from twisted.internet import reactor  # noqa: E402
 )
 @click.option("--cuda-device-id", default=0, type=int, help="choose a debug level")
 @click.option(
-    "--no-stream",
+    "--stream",
     is_flag=True,
     show_default=True,
     default=False,
     type=bool,
     help=(
-        "Disable streaming the output. Best if not, but ok if you have a slow "
+        "Enable streaming the output. Best if not, but ok if you have a slow "
         + "connection."
     ),
 )
@@ -58,7 +61,7 @@ def run(
     model: str,
     log_level: str,
     cuda_device_id: Optional[int],
-    no_stream: bool,
+    stream: bool,
 ) -> None:
     """
     Ollama Watch-Dog With a Tail, is an utility to create a chat-bot CLI with Ollama.
@@ -124,7 +127,7 @@ def run(
     from src.pub_sub_orchestrator import PubSubOrchestrator
 
     orchestrator = PubSubOrchestrator(
-        prompt_file=prompt_file, model=model, enable_stream=not no_stream
+        prompt_file=prompt_file, model=model, enable_stream=stream
     )
 
     asyncio.ensure_future(orchestrator.start())

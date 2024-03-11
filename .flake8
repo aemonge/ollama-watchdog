@@ -1,4 +1,5 @@
 [flake8]
+builtins = ic
 base-package = app
 docstring_style= numpy
 inline-quotes = double
@@ -12,7 +13,9 @@ naming-convention = snake_case
 ignore=D101, D102
 require-code = true
 per-file-ignores =
-    *test.py: T201, D100, DC100
+    *test.py: T201, D100, DC100, D103, ANN201, S101
+    test_*.py: T201, D100, DC100, D103, ANN201, S101
+
 
 restrict_relative_imports = true
 restrict_local_scope_imports = true

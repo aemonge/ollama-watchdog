@@ -5,13 +5,24 @@ import re
 
 def remove_comments(content: str) -> str:
     """
-    Remove comment string.
+    Remove HTML-style comments from Markdown content, including multi-line comments.
 
-    Todo
-    ----
-    [ ] Allow inline comment to be processed
-        >>> remove_comments("inline <!-- ignore me --> comment")
-        <<< "inline commment"
+    While attempting to preserve original spacing and formatting as closely as possible.
+    Perform a triple pass to ensure all comments, surrounding whitespace, and
+    formatting are correctly handled.
+
+    Examples
+    --------
+    >>> remove_comments("inline <!-- ignore me --> comment")
+    <<< "inline  comment"
+    >>> content = '''This is a test.
+    >>> <!-- Start of a multi-line comment
+    >>> It continues here
+    >>> And ends here -->
+    >>> The end of the test.'''
+    >>> remove_comments(content)
+    <<< This is a test.
+    <<< The end of the test.
 
     Parameters
     ----------
@@ -23,11 +34,5 @@ def remove_comments(content: str) -> str:
     : str
         The content without comments
     """
-    comment_regex = r"<!--(?:.*?)-->"
-    result = []
-    for line in content:
-        _line = line.strip()
-        if _line and not re.search(comment_regex, _line):
-            result.append(_line)
-
-    return "\n".join(result)
+    html_comment_pattern = re.compile(r"<!--.*?-->(\n)?", re.DOTALL)
+    return re.sub(html_comment_pattern, "", content).strip()

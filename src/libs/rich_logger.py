@@ -90,7 +90,9 @@ class RichLogging(RichHandler):
         return self.console.width - 2
 
     @classmethod
-    def block(cls, msg: str = "Chatting...", style: str = "[bold #326990]") -> None:
+    def block(
+        cls, msg: str = "Chatting...", style: str = f"[bold {LOG_STYLES['WARNING']}]"
+    ) -> None:
         """
         Set block to True.
 
@@ -99,17 +101,21 @@ class RichLogging(RichHandler):
         msg : str
             The message to display, default is 'Chatting...'
         style : str
-            The style to display the message, default is [bold #326990]
+            The style to display the message, default is [bold {LOG_STYLES['WARNING']}]
         """
         cls._blocked = True
-        cls.spinner = Status(f"{style} {msg}", spinner="dots", console=cls.console)
-        cls.spinner.start()
+        if logging.getLogger().getEffectiveLevel() >= logging.WARNING:
+            cls.spinner = Status(f"{style} {msg}", spinner="dots", console=cls.console)
+            cls.spinner.start()
 
     @classmethod
     def unblock(cls) -> None:
         """Set block to False."""
         cls._blocked = False
-        if cls.spinner is not None:
+        if (
+            logging.getLogger().getEffectiveLevel() >= logging.WARNING
+            and cls.spinner is not None
+        ):
             cls.spinner.stop()
 
     @classmethod

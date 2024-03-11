@@ -210,7 +210,6 @@ class Chatter(PublisherSubscriber):
             else:
                 response = self.llm.invoke(prompt)
 
-        logging.info(f"{self.__class__.__name__} is handling the response.")
         event = MessageEvent("ai_message", response, self.llm.model)
         logging.info(f'{self.__class__.__name__} is sending ["print", "record"] events')
         logging.debug(event)

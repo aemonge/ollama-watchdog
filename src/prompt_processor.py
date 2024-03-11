@@ -54,8 +54,11 @@ class PromptProcessor(PublisherSubscriber):
         : str
             The enhanced and chained prompt
         """
+        print(prompt)
         prompt = cast(str, prompt)
+        print(prompt)
         prompt = remove_comments(prompt)
+        print(prompt)
         return prompt
 
     def generate_context(self, prompt: ExtendedMessage) -> str:

@@ -8,7 +8,7 @@ from typing import AsyncIterator, Iterator, Optional, cast
 from uuid import UUID, uuid4
 
 from langchain_core.messages.base import BaseMessage
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
 from src.libs.rich_logger import RichLogging
@@ -203,12 +203,15 @@ class Recorder(PublisherSubscriber):
             )
         )
         self.session.commit()
-
-        # if len(self.history["processed"].messages) % SUMMARIZE_EVERY == 0:
-        #     await self._trigger_sumarize()
-        # else:
-        #     RichLogging.unblock()
-        RichLogging.unblock()
+        if (
+            count := self.session.query(func.count(ChatHistory.history_id))
+            .filter(ChatHistory.session_id == self.session_id)
+            .filter(ChatHistory.conversation_id == self.conversation_id)
+            .scalar()
+        ) and count % SUMMARIZE_EVERY == 0:
+            await self._trigger_sumarize()
+        else:
+            RichLogging.unblock()
 
     async def _human_processed_message(self, event: MessageEvent) -> None:
         """
@@ -228,18 +231,24 @@ class Recorder(PublisherSubscriber):
         ):
             return
 
-        # if history_sumarized := self.history["summarized"].messages:
-        #     history_sumarized = cast(str, history_sumarized[-1].content)
-        # else:
-        #     history_sumarized = None
-        history_sumarized = None
+        history = (
+            self.session.query(ChatHistory)
+            .order_by(ChatHistory.created_at.desc())
+            .limit(SUMMARIZE_EVERY)
+            .all()
+            or None
+        )
+        summary = (
+            self.session.query(ChatSummary)
+            .order_by(ChatSummary.created_at.desc())
+            .first()
+            or None
+        )
 
         event = MessageEvent(
             "chat",
             PromptMessage(
-                cast(str, msg.content),
-                # history=self.history["processed"].messages[-SUMMARIZE_EVERY:],
-                # history_sumarized=history_sumarized,
+                cast(str, msg.content), history=history, history_sumarized=summary
             ),
             event.author,
         )
