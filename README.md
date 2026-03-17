@@ -1,5 +1,7 @@
 # ollama-watchdog
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/aemonge)
+
 **A Linux daemon that enhances the chat experience in Ollama by handling file includes
 and web crawling.**
 
